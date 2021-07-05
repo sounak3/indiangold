@@ -7,7 +7,7 @@ IndianGold is not just another weight conversion tool. It is focussed at convert
 _____________________________________________________
 END USER LICENSE AGREEMENT (DISCLAIMER)
 
-    IndianGold v1.0 (Weight and price calculation application)
+    IndianGold v2.0 (Weight and price calculation application)
     Copyright (C) 2012  Sounak Choudhury
 
     This program is free software: you can redistribute it and/or modify
@@ -23,12 +23,13 @@ END USER LICENSE AGREEMENT (DISCLAIMER)
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
     My contact e-mail: sounak3@gmail.com, phone: +91-9595949401.
+
 _____________________________________________________
 REQUIREMENTS
 
 ANY OS. AS JAVA IS PLATFORM INDEPENDENT ;)
-JAVA 2 (JRE 1.5 OR MORE REQUIRED).
-FOLLOWING FILES ARE REQUIRED: INDIANGOLD.JAR & UNITS.DAT
+JAVA SE / JRE 1.8 OR MORE REQUIRED.
+
 _____________________________________________________
 ADDING PROJECT TO NETBEANS IDE
 
