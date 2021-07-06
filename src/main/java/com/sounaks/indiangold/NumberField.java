@@ -46,8 +46,8 @@ public class NumberField extends JTextField implements KeyListener
             {
                 if(ss.substring(i,i+1).equals("."))
                 {
-                        getToolkit().beep();
-                        e.consume();
+                    getToolkit().beep();
+                    e.consume();
                 }
             }
         }

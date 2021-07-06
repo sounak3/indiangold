@@ -1,14 +1,14 @@
 #IndianGold2.0
-#Sun Jul 29 20:18:56 IST 2012
-kilogram\ (kg)=1.0E-6
+#Wed Aug 01 13:45:51 IST 2012
+default_kilogram\ (kg)=1.0E-6
+default_grain\ (gr)=0.015432400030648748
 bhori\ (bengali/old\ tola)=8.573388203017832E-5
+default_cent\ (pt)=0.5
+default_pound\ (lb)=2.204619999998249E-6
 gram\ (g)=0.0010
 carat\ (ct)=0.0050
 ratti\ (rt)=0.005494509992758181
-grain\ (gr)=0.015432400030648748
-ounce\ (oz)=3.527400000010385E-5
-pound\ (lb)=2.204619999998249E-6
+default_ounce\ (oz)=3.527400000010385E-5
 tola\ (per\ 10\ grams)=1.0E-4
-cent\ (pt)=0.5
 tola\ (gujrati/per\ 12\ g)=8.333333333333333E-5
 miligram\ (mg)=1.0

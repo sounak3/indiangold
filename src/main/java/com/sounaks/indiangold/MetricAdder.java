@@ -39,15 +39,21 @@ class MetricAdder extends JDialog implements ActionListener
 	MetricAdder(JDialog frame, Vector <String>listContents, String val) // enters edit mode if val = null
 	{
 		super(frame,"Enter Details...");
+		Vector<String> contents = new Vector<String>(listContents.size());
+		for(int i=0; i<listContents.size(); i++)
+		{
+			String tmp = listContents.elementAt(i);
+			contents.addElement(tmp.startsWith("default_") ? tmp.substring(tmp.indexOf("_")+1) : tmp);
+		}
 		l1=new JLabel("Number of Units");
 		n1=new NumberField(10);
 		l2=new JLabel("Unit Name");
 		t1=new JTextField(10);
 		l3=new JLabel("Amount");
 		n2=new NumberField(10);
-		j1=new JComboBox(listContents);
+		j1=new JComboBox(contents);
 		j1.setPreferredSize(t1.getPreferredSize());
-		if(!(val == null || val.equals(null) || val.equals("")) && listContents.contains(val))
+		if(!(val == null || val.equals(null) || val.equals("")) && contents.contains(val))
 		{
 			j1.setSelectedItem(val);
 			t1.setText(val);
@@ -94,9 +100,9 @@ class MetricAdder extends JDialog implements ActionListener
 		newMetric=new String[4];
 	}
 	
-	public static String[] getNewMetric(JDialog parent, Vector <String>listContents, String val)
+	public static String[] getNewMetric(JDialog parent, Vector <String>contents, String val)
 	{
-		MetricAdder adder=new MetricAdder(parent, listContents, val);
+		MetricAdder adder=new MetricAdder(parent, contents, val);
 		Dimension dim = IndianGold.getScreenCenterLocation(adder);
 		adder.setLocation(dim.width, dim.height);
 		adder.setVisible(true);

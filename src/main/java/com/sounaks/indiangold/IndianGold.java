@@ -1,3 +1,22 @@
+
+/*
+    IndianGold.java : Part of IndianGold weight calculation software application.
+    Copyright (C) 2012  Sounak Choudhury
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License, as published by
+    the Free Software Foundation, version 3.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+My contact e-mail: sounak3@gmail.com, phone: +91-9595949401.
+*/
 package com.sounaks.indiangold;
 
 import javax.swing.*;
@@ -8,7 +27,7 @@ import java.text.*;
 import javax.swing.text.*;
 import javax.swing.table.*;
 import java.io.*;
-import java.util.Vector;
+import java.util.*;
 import javax.imageio.ImageIO;
 
 public class IndianGold extends JFrame implements ActionListener, FocusListener
@@ -28,19 +47,20 @@ public class IndianGold extends JFrame implements ActionListener, FocusListener
 	DefaultTableModel model;
 	JButton abtButton, setButton;
 	JScrollPane spane;
+	Currency currency;
 
 	private String getCostString()
 	{
 		String costString = "Price of ";
-		if(text1.getText().equals("") || text1.getText() == null) costString = costString + "0.00";
+		if(text1.getText().equals("") || text1.getText().equals(null)) costString = costString + localeZero();
 		else costString = costString + text1.getText();
-		costString = costString + " " + (String)comb1.getSelectedItem() + " will be Rs.";
+		costString = costString + " " + (String)comb1.getSelectedItem() + " will be "+currency.getSymbol();
 		return costString;
 	}
 
 	private String getDecimalFormatString()
 	{
-		int input;
+		int input=0;
 		String format="###########0";
 		try
 		{
@@ -48,7 +68,7 @@ public class IndianGold extends JFrame implements ActionListener, FocusListener
 		}
 		catch(NumberFormatException ne)
 		{
-			input=2;
+			input = currency.getDefaultFractionDigits();
 		}
 		if(input != 0) format=format+".";
 		for(int i=0;i<input;i++)
@@ -60,7 +80,7 @@ public class IndianGold extends JFrame implements ActionListener, FocusListener
 
 	private double getNumberInput(NumberField source)
 	{
-		double input;
+		double input=0.00;
 		try
 		{
 			input=Double.parseDouble(source.getText());
@@ -116,15 +136,30 @@ public class IndianGold extends JFrame implements ActionListener, FocusListener
 
 	private void calculateCost()
 	{
-		formatter = new DecimalFormat("###########0.00");
+		String fmtr = "###########0.";
+		for(int i=0;i<currency.getDefaultFractionDigits();i++)
+		{
+			fmtr=fmtr+"0";
+		}
+		formatter = new DecimalFormat(fmtr);
 
 		double costPerMiligram = getNumberInput(text2)/(getNumberInput(text3)/getWeightSelectionMgValue(comb3));
 		double noOfMiligrams = getNumberInput(text1)/ getWeightSelectionMgValue(comb1);
 
 		if(new Double(costPerMiligram * noOfMiligrams).equals(Double.NaN))
-		costArea.setText(getCostString()+"0.00");
+		costArea.setText(getCostString()+localeZero());
 		else
 		costArea.setText(getCostString()+formatter.format(costPerMiligram * noOfMiligrams));
+	}
+
+	private String localeZero()
+	{
+		String fmtr = "0.";
+		for(int i=0;i<currency.getDefaultFractionDigits();i++)
+		{
+			fmtr=fmtr+"0";
+		}
+		return fmtr;
 	}
 
 	private void resetUIData()
@@ -133,24 +168,14 @@ public class IndianGold extends JFrame implements ActionListener, FocusListener
 		weightList.addAll(fOps.getPropertyNames());
 		mgValue.clear();
 		mgValue.addAll(fOps.getPropertyValues());
-		text2.setText(text2.getText().equals("") ? "0.00" : text2.getText());
+		text2.setText(text2.getText().equals("") ? localeZero() : text2.getText());
 		text3.setText(text3.getText().equals("") ? "10" : text3.getText());
 		if(weightList==null) System.out.println("got");
 		comb1.setSelectedItem(weightList.contains(comb1.getSelectedItem()) ? comb1.getSelectedItem() : weightList.isEmpty()?"":weightList.elementAt(0));
-		comb2.setSelectedItem(((String)comb2.getSelectedItem()).equals("0") ? "2" : (String)comb2.getSelectedItem());
+		comb2.setSelectedItem(((String)comb2.getSelectedItem()).equals("0") ? String.valueOf(currency.getDefaultFractionDigits()) : (String)comb2.getSelectedItem());
 		comb3.setSelectedItem(weightList.contains(comb3.getSelectedItem()) ? comb3.getSelectedItem() : weightList.isEmpty()?"":weightList.elementAt(0));
 	}
 
-	public Icon getResizedIcon(Icon icon, int width, int height)
-	{
-		SafeIcon ico = new SafeIcon(icon);
-		BufferedImage image = new BufferedImage(ico.getIconWidth(), ico.getIconHeight(), BufferedImage.TYPE_INT_ARGB);
-		ico.paintIcon(new JButton(), image.getGraphics(), 0, 0);
-		Image tmpImg = image.getScaledInstance(width, height, Image.SCALE_AREA_AVERAGING);
-		return new ImageIcon(tmpImg);
-	}
-
-        @Override
 	public void actionPerformed(ActionEvent ae)
 	{
 		Object src = ae.getSource();
@@ -159,7 +184,6 @@ public class IndianGold extends JFrame implements ActionListener, FocusListener
 			String s1 = "<html>Created and Developed by : Sounak Choudhury<p>E-mail Address : <a href='mailto:contact@sounaks.com'>contact@sounaks.com</a><p>The software, information and documentation<p>is provided \"AS IS\" without warranty of any<p>kind, either expressed or implied. The Readme.txt<p>file containing EULA must be read before use.<p>Suggestions and credits are Welcomed.</html>";
                         ImageIcon imageicon = new ImageIcon(Thread.currentThread().getContextClassLoader().getResource("duke.gif"));
 			JOptionPane.showMessageDialog(new Frame(), s1, "About IndianGold...", 1, imageicon);
-
 		}
 		else if(src.equals(setButton))
 		{
@@ -195,11 +219,13 @@ public class IndianGold extends JFrame implements ActionListener, FocusListener
 
 	public IndianGold()
 	{
-		super("Indian Gold v2.0");
+		super("Indian Gold v3.0");
 
-		fOps=new FileOperations(new File("units.dat"), "IndianGold2.0");
+		fOps=new FileOperations(new File("units.dat"),"IndianGold3.0");
 		weightList=new Vector<String>(); //fOps.getPropertyNames();
 		mgValue=new Vector<String>(); //fOps.getPropertyValues();
+		Locale locale = Locale.getDefault();
+		currency = Currency.getInstance(locale);
 		text1=new NumberField(14);
 		text1.addActionListener(this);
 		text1.addFocusListener(this);
@@ -215,6 +241,8 @@ public class IndianGold extends JFrame implements ActionListener, FocusListener
 		String nums[]=new String[]{"0","1","2","3","4","5","6","7","8","9","10","11","12"};
 		comb2=new JComboBox(nums);
 		comb2.addActionListener(this);
+		//java.net.URL url1 = this.getClass().getResource("info.gif");
+		//java.net.URL url2 = this.getClass().getResource("gears.gif");
 		Icon about = getResizedIcon(UIManager.getIcon("OptionPane.informationIcon"),16,16); //new ImageIcon(url1);
 		Icon settings = getResizedIcon(UIManager.getIcon("FileChooser.detailsViewIcon"),16,16); //new ImageIcon(url2);
 		abtButton=new JButton(about);
@@ -251,7 +279,7 @@ public class IndianGold extends JFrame implements ActionListener, FocusListener
 		p2.add(spane);
 		p2.setBorder(BorderFactory.createEtchedBorder());
 
-		l2=new JLabel("Rate : Rs.");
+		l2=new JLabel("Rate : "+currency.getSymbol());
 		text2=new NumberField(5);
 		text2.addActionListener(this);
 		text2.addFocusListener(this);
@@ -276,7 +304,7 @@ public class IndianGold extends JFrame implements ActionListener, FocusListener
 		StyleConstants.setBold(attribs , true);
 		StyleConstants.setForeground(attribs , Color.red);
 		costArea.setParagraphAttributes(attribs,true);  
-		costArea.setText(getCostString()+"0.00");
+		costArea.setText(getCostString()+localeZero());
 		costArea.setEditable(false);
 		costArea.setFocusable(false);
 		costArea.setBorder(BorderFactory.createEtchedBorder());
@@ -306,10 +334,19 @@ public class IndianGold extends JFrame implements ActionListener, FocusListener
 		resetUIData();
 	}
 
-	public void displayNumRows(int num)
+	public void displayNumRows(int num) //method for controlling number of rows to dispaly in the table
 	{
 		int hh=table1.getRowMargin()+table1.getRowHeight(0);
 		spane.setPreferredSize(new Dimension(340,num*hh+hh));
+	}
+
+	public Icon getResizedIcon(Icon icon, int width, int height)
+	{
+		SafeIcon ico = new SafeIcon(icon);
+		BufferedImage image = new BufferedImage(ico.getIconWidth(), ico.getIconHeight(), BufferedImage.TYPE_INT_ARGB);
+		ico.paintIcon(new JButton(), image.getGraphics(), 0, 0);
+		Image tmpImg = image.getScaledInstance(width, height, Image.SCALE_AREA_AVERAGING);
+		return new ImageIcon(tmpImg);
 	}
 
 	public static Dimension getScreenCenterLocation(Container cont)

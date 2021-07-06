@@ -85,7 +85,6 @@ class FileOperations
 		for(;enum1.hasMoreElements();)
 		{
 			String tmp=enum1.nextElement().toString().toLowerCase();
-			if(tmp.startsWith("default_")) continue;
 			String tmp1=getValue(tmp,"");
 			data1.addElement(tmp);
 			data2.addElement(tmp1);
@@ -103,7 +102,7 @@ class FileOperations
                     {
                         String path1 = path.split(".jar!")[0].replace('\\', '/');
                         createdPath = path1.substring(0, path1.lastIndexOf('/'))+ "/" + file.getName();
-                    }
+		}
                     try
                     {
                         File test = new File((new java.net.URL(createdPath)).toURI());
@@ -135,7 +134,7 @@ class FileOperations
 			try
 			{
 				path = URLDecoder.decode(FileOperations.class.getProtectionDomain().getCodeSource().getLocation().getPath(), "UTF-8");
-                                if(path.toLowerCase().endsWith(".jar"))
+				if(path.toLowerCase().endsWith(".jar"))
 				{
 					File tryfile = new File(path);
 					path = URLDecoder.decode(tryfile.getParentFile().getPath(), "UTF-8");
@@ -172,9 +171,9 @@ class FileOperations
                         if(!propFile.exists()) propFile.createNewFile();
                     }
 //                    System.out.println("Saving to: "+propFile.getPath());
-                    fout = new FileOutputStream(propFile);
-                    props.store(fout, header);
-                    fout.close();
+			fout = new FileOutputStream(propFile);
+			props.store(fout, header);
+			fout.close();
 		}
 		catch(Exception e)
 		{
@@ -241,14 +240,10 @@ class FileOperations
 		return props.getProperty(pName, pValue);
 	}
 	
-	public void setValue(String pName,String pValue, int place)
+	public void setValue(String pName,String pValue)
 	{
 		if(!modify) tmpProps.putAll(props);
 		pName=pName.toLowerCase();
-		boolean dflt = pName.startsWith("default_");
-		if(!dflt)
-		{
-		}
 		props.put(pName,pValue);
 		loadVectors();
 		modify = true;

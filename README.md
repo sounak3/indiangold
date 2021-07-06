@@ -7,7 +7,7 @@ IndianGold is not just another weight conversion tool. It is focussed at convert
 _____________________________________________________
 END USER LICENSE AGREEMENT (DISCLAIMER)
 
-    IndianGold v2.0 (Weight and price calculation application)
+    IndianGold v3.0 (Weight and price calculation application)
     Copyright (C) 2012  Sounak Choudhury
 
     This program is free software: you can redistribute it and/or modify
