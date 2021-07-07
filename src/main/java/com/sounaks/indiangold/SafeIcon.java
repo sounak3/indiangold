@@ -31,8 +31,13 @@
 
 package com.sounaks.indiangold;
 
-import java.awt.*;
-import java.awt.image.*;
+/**
+ *
+ * @author Darryl Burke/Rob Camick
+ */
+import java.awt.Component;
+import java.awt.Graphics;
+import java.awt.image.BufferedImage;
 import javax.swing.*;
 
 public class SafeIcon implements Icon {

@@ -1,14 +1,41 @@
-#IndianGold2.0
-#Wed Aug 01 13:45:51 IST 2012
-default_kilogram\ (kg)=1.0E-6
-default_grain\ (gr)=0.015432400030648748
-bhori\ (bengali/old\ tola)=8.573388203017832E-5
-default_cent\ (pt)=0.5
-default_pound\ (lb)=2.204619999998249E-6
-gram\ (g)=0.0010
-carat\ (ct)=0.0050
-ratti\ (rt)=0.005494509992758181
-default_ounce\ (oz)=3.527400000010385E-5
-tola\ (per\ 10\ grams)=1.0E-4
-tola\ (gujrati/per\ 12\ g)=8.333333333333333E-5
-miligram\ (mg)=1.0
+#IndianGold4.0
+#Tue Jun 29 02:43:16 IST 2021
+$clickcondition=2
+*pennyweight\ (dwt-pwt)=6.430149313725596E-4
+*ratti\ (rt)=0.005494509992758181
+$calculator=1
+$currency=USD
+@rhodium=17800.00
+_grain\ (gr)=0.015432400030648748
+*carat\ (ct)=0.0050
+*troy\ ounce\ (oz\ t)=3.215074656862798E-5
+@uranium=32.30
+@silver=26.09
+@nickel=8.2654
+_cent\ (pt)=0.5
+$convfactor=74.283006
+@lead=1.0132
+@zinc=1.3115
+*tola\ (non\ std\ tola\ 10g)=1.0E-4
+$ratetime=1624903927201
+$bunit=pound (lb)
+$numrows=11
+$taxes=SGST |1.5|CGST |1.5|Tax-3|0.0|Tax-4|0.0
+*tola\ (old\ british\ /\ gujrati\ tola)=8.333333333333333E-5
+@gold=1779.00
+@palladium=2619.00
+$numdecimals=2
+*pound\ (lb)=2.204619999998249E-6
+$ratebar=1
+@platinum=1088.00
+@copper=4.2455
+$punit=troy ounce (oz t)
+@aluminum=1.1275
+*ounce\ (oz)=3.527400000010385E-5
+*miligram\ (mg)=1.0
+$bunitspercurrency=1
+$punitspercurrency=1
+*gram\ (g)=0.0010
+*kilogram\ (kg)=1.0E-6
+*tola\ (bhori\ /\ standard\ tola)=8.573388203017832E-5
+$rateauto=2

@@ -19,6 +19,10 @@ My contact e-mail: sounak3@gmail.com, phone: +91-9595949401.
 
 package com.sounaks.indiangold;
 
+/**
+ *
+ * @author Sounak Choudhury
+ */
 public class CheckableItem
 {
         private String  str;
@@ -26,14 +30,14 @@ public class CheckableItem
 
         public CheckableItem(String name)
         {
-                if(name.startsWith("default_"))
+                if(name.startsWith("_"))
                 {
                         str = name.substring(name.indexOf("_")+1);
                         isSelected = false;
                 }
-                else
+                else if(name.startsWith("*"))
                 {
-                        str = name;
+                        str = name.substring(name.indexOf("*")+1);
                         isSelected = true;
                 }
         }
@@ -48,18 +52,26 @@ public class CheckableItem
 
         public boolean isSelected() 
         {
-        return isSelected;
+            return isSelected;
         }
 
-        public String toString() //this will anyway return str without default_
+    @Override
+        public String toString() //this will anyway return str without _ or *
         {
-                if(str.startsWith("default_")) return str.substring(str.indexOf("_")+1);
+                if(str.startsWith("_")) return str.substring(str.indexOf("_")+1);
+                else if(str.startsWith("*")) return str.substring(str.indexOf("*")+1);
                 else return str;
         }
 
         public String fullName() //this will return actual str
         {
-                if(isSelected) return str;
-                else return "default_"+str;
+            if(isSelected)
+            {
+                return "*"+str;
+            }
+            else
+            {
+                return "_"+str;
+            }
         }
 }

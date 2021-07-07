@@ -21,32 +21,40 @@ package com.sounaks.indiangold;
  * @author Sounak Choudhury
  */
 import javax.swing.*;
-import java.awt.*;
 
-public class CheckboxListRenderer extends JCheckBox implements ListCellRenderer
+public class CurrencyComboModel extends AbstractListModel implements ComboBoxModel
 {
-	public CheckboxListRenderer()
+	CurrencyCode cCode;
+	String itemList[];
+
+    @Override
+	public Object getElementAt(int index)
 	{
-		setBackground(UIManager.getColor("List.textBackground"));
-		setForeground(UIManager.getColor("List.textForeground"));
+		return itemList[index];
 	}
-	
-	public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean hasFocus)
+
+    @Override
+	public int getSize()
 	{
-		setEnabled(list.isEnabled());
-		setSelected(((CheckableItem)value).isSelected());
-		setFont(list.getFont());
-		setText(value.toString());
-		if(isSelected)
-		{
-			setBackground(list.getSelectionBackground());
-			setForeground(list.getSelectionForeground());
-		}
-		else
-		{
-			setBackground(list.getBackground());
-			setForeground(list.getForeground());
-		}
-		return this;
+		return cCode.size();
+	}
+
+	public CurrencyComboModel()
+	{
+		super();
+		cCode = new CurrencyCode("INR");
+		itemList = cCode.getCurrencyList();
+	}
+
+    @Override
+	public void setSelectedItem(Object anItem)
+	{
+		cCode.setName((String)anItem);
+	}
+
+    @Override
+	public Object getSelectedItem()
+	{
+		return cCode.getCode();
 	}
 }

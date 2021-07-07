@@ -19,353 +19,626 @@ My contact e-mail: sounak3@gmail.com, phone: +91-9595949401.
 */
 package com.sounaks.indiangold;
 
-import javax.swing.*;
+/**
+ *
+ * @author Sounak Choudhury
+ */
+import com.sounaks.indiangold.RateBar.RateLabel;
 import java.awt.*;
-import java.awt.image.*;
 import java.awt.event.*;
-import java.text.*;
-import javax.swing.text.*;
-import javax.swing.table.*;
-import java.io.*;
-import java.util.*;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.util.Currency;
+import java.util.Vector;
 import javax.imageio.ImageIO;
+import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.text.SimpleAttributeSet;
+import javax.swing.text.StyleConstants;
 
+/**
+ * 
+ * @author Sounak Choudhury
+ */
 public class IndianGold extends JFrame implements ActionListener, FocusListener
 {
-	//String weightList[]=new String[]{"miligrams (mg)","grams (g)","kilograms (kg)","ratti (rt)","grains (gr)","carats (ct)","ounces (oz)","pounds (lb)","cents (pts)","bengal bhori (old tola)","tola (per 10 grams)", "gujrati tola"};
-	//Double mgValue[]=new Double[]{1.000000000000,0.001000000000,0.000001000000,0.005494510000,0.015432400000,0.005000000000,0.000035274000,0.000002204620,0.500000000000,0.000085733882,0.000100000000,0.000083333333};
-	Vector <String>weightList;
-	Vector <String>mgValue;
-	FileOperations fOps;
-	AddRemoveBox box;
-	JLabel l1, l2, l3;
-	JTextPane costArea;
-	NumberField text1, text2, text3;
-	JTable table1;
-	JComboBox comb1, comb2, comb3;
-	DecimalFormat formatter;
-	DefaultTableModel model;
-	JButton abtButton, setButton;
-	JScrollPane spane;
-	Currency currency;
+    //String weightList[]=new String[]{"miligrams (mg)","grams (g)","kilograms (kg)","ratti (rt)","grains (gr)","carats (ct)","ounces (oz)","pounds (lb)","cents (pts)","bengal bhori (old tola)","tola (per 10 grams)", "gujrati tola"};
+    //Double mgValue[]=new Double[]{1.000000000000,0.001000000000,0.000001000000,0.005494510000,0.015432400000,0.005000000000,0.000035274000,0.000002204620,0.500000000000,0.000085733882,0.000100000000,0.000083333333};
+    Vector <String>weightList;
+    Vector <String>mgValue;
+    FileOperations fOps;
+    AddRemoveBox box;
+    JLabel l1, l2, l3, l4, l5, l6, l7;
+    JTextPane costArea;
+    NumberField weightField, rateField, noOfUnitsField, makingChargeField, discountField;
+    JTable table1;
+    JComboBox weightUnitCombo1, weightUnitCombo2, discountOnCombo3;
+    DecimalFormat formatter;
+    DefaultTableModel model;
+    JButton abtButton, setButton;
+    JScrollPane spane;
+    JPanel mainPane;
+    RateBar ratePane;
+    Currency currency;
+    ShowHideAdapter sha;
 
-	private String getCostString()
-	{
-		String costString = "Price of ";
-		if(text1.getText().equals("") || text1.getText().equals(null)) costString = costString + localeZero();
-		else costString = costString + text1.getText();
-		costString = costString + " " + (String)comb1.getSelectedItem() + " will be "+currency.getSymbol();
-		return costString;
-	}
+    /**
+     * Internal method to make the sentence to be displayed in the price panel.
+     * @return A string to be displayed in the price panel.
+     */
+    private String getCostString(String cost, String mkCharge, String discount, String gstPercent, String gst, String total)
+    {
+//        String costString = "Net wt.: ";
+//        if(weightField.getText().equals("") || weightField.getText() == null) costString = costString + "0";
+//        else costString = costString + weightField.getText();
+//        String currSymbol = currency.getSymbol();
+//        costString = costString + " " + (String)weightUnitCombo1.getSelectedItem() + "\n Total: " + currSymbol
+//                + total + ". (Price " + currSymbol + cost + ", making charge " + currSymbol + mkCharge 
+//                + ", discount " + currSymbol + discount + " and " + currSymbol + gst + " GST)";
+        
+        String currSymbol = currency.getSymbol();
+        String costString = "Total: " + currSymbol + " " + total + ". (Base price: " + currSymbol + " " 
+                + cost + ", Making charge: " + currSymbol + " " + mkCharge + ", Discount: " + currSymbol 
+                + " " + discount + " and Taxes " + gstPercent + "%: " + currSymbol + " " + gst + ")";
+        
+        return costString;
+    }
+    
+    private String getCostString()
+    {
+        return getCostString(localeZero(), localeZero(), localeZero(), localeZero(), localeZero(), localeZero());
+    }
 
-	private String getDecimalFormatString()
-	{
-		int input=0;
-		String format="###########0";
-		try
-		{
-			input=Integer.parseInt((String)comb2.getSelectedItem());
-		}
-		catch(NumberFormatException ne)
-		{
-			input = currency.getDefaultFractionDigits();
-		}
-		if(input != 0) format=format+".";
-		for(int i=0;i<input;i++)
-		{
-			format=format+"0";
-		}
-		return format+"  ";
-	}
+    /**
+     * Internal method to create a number format string based on the number of decimal places input given. This is used in updating the weight table. 
+     * @return A string having the number format either according to the number of decimal places input given OR as the default locale.
+     */
+    private String getDecimalFormatString()
+    {
+        int input;
+        String format="###########0";
+        try
+        {
+            input=Integer.parseInt((String)fOps.getValue("$numdecimals", "2"));
+        }
+        catch(NumberFormatException ne)
+        {
+            input = currency.getDefaultFractionDigits();
+        }
+        if(input != 0) format=format+".";
+        for(int i=0;i<input;i++)
+        {
+            format=format+"0";
+        }
+        return format+"  ";
+    }
 
-	private double getNumberInput(NumberField source)
-	{
-		double input=0.00;
-		try
-		{
-			input=Double.parseDouble(source.getText());
-		}
-		catch(NumberFormatException ne)
-		{
-			input=0.00;
-		}
-		return input;
-	}
-
-	private double getWeightSelectionMgValue(JComboBox source)
-	{
-		String selection=(String)source.getSelectedItem();
-		for(int i=0; i<weightList.size(); i++)
-		{
-			if(weightList.elementAt(i).equals(selection))
-			{
-				try
-				{
-					return Double.parseDouble(mgValue.elementAt(i));
-				}
-				catch(NumberFormatException ne)
-				{
-					System.out.println("Error parsing weight value: "+ne.toString());
-					return 0;
-				}
-			}
-		}
-		return new Double(0);
-	}
+    /**
+     * Internal method to parse and get the milligram value of the unit selected in the given combo box.
+     * @param source Represents the JComboBox to be parsed.
+     * @return The milligram value of the selected unit.
+     */
+    private double getWeightSelectionMgValue(JComboBox source)
+    {
+        String selection=(String)source.getSelectedItem();
+        for(int i=0; i<weightList.size(); i++)
+        {
+            if(weightList.elementAt(i).equals(selection))
+            {
+                try
+                {
+                    return Double.parseDouble(mgValue.elementAt(i));
+                }
+                catch(NumberFormatException ne)
+                {
+                    System.out.println("Error parsing weight value: "+ne.toString());
+                    return 0;
+                }
+            }
+        }
+        return new Double(0);
+    }
 	
-	private void calculateWeights()
-	{
-		formatter = new DecimalFormat(getDecimalFormatString());
-		double weightVal=0.00;
-		model.setRowCount(weightList.size());
-		for(int i=0; i<weightList.size(); i++)
-		{
-			try
-			{
-				weightVal = Double.parseDouble(mgValue.elementAt(i));
-			}
-			catch(NumberFormatException ne)
-			{
-				System.out.println("Error parsing weight value: "+ne.toString());
-				weightVal = 0;
-			}
-			model.setValueAt(formatter.format((getNumberInput(text1) / getWeightSelectionMgValue(comb1)) * weightVal), i, 0);
-			model.setValueAt(weightList.elementAt(i), i, 1);
-		}
-	}
+    /**
+     * Internal method which calculates and updates the table in the GUI to show the converted weight values.
+     */
+    private void calculateWeights()
+    {
+        formatter = new DecimalFormat(getDecimalFormatString());
+        double weightVal;
+        model.setRowCount(weightList.size());
+        for(int i=0; i<weightList.size(); i++)
+        {
+            try
+            {
+                weightVal = Double.parseDouble(mgValue.elementAt(i));
+            }
+            catch(NumberFormatException ne)
+            {
+                System.out.println("Error parsing weight value: "+ne.toString());
+                weightVal = 0.00D;
+            }
+            model.setValueAt(formatter.format(weightField.getNumberInput() / getWeightSelectionMgValue(weightUnitCombo1) * weightVal), i, 0);
+            model.setValueAt(weightList.elementAt(i), i, 1);
+        }
+    }
 
-	private void calculateCost()
-	{
-		String fmtr = "###########0.";
-		for(int i=0;i<currency.getDefaultFractionDigits();i++)
-		{
-			fmtr=fmtr+"0";
-		}
-		formatter = new DecimalFormat(fmtr);
+    /**
+     * Internal method to calculate and update the price panel with the cost of the given weight, based on the rate input given.
+     */
+    private void calculateCost()
+    {
+        String fmtr = "###########0.";
+        for(int i=0;i<currency.getDefaultFractionDigits();i++)
+        {
+            fmtr=fmtr+"0";
+        }
+        formatter = new DecimalFormat(fmtr);
+        double noOfMiligrams = weightField.getNumberInput() / getWeightSelectionMgValue(weightUnitCombo1);
 
-		double costPerMiligram = getNumberInput(text2)/(getNumberInput(text3)/getWeightSelectionMgValue(comb3));
-		double noOfMiligrams = getNumberInput(text1)/ getWeightSelectionMgValue(comb1);
+        // Price of one unit = RATE of N units / N units
+        double priceOfOneUnit = rateField.getNumberInput() / noOfUnitsField.getNumberInput();
+        // Price of one miligram
+        double pricePerMiligram = priceOfOneUnit * getWeightSelectionMgValue(weightUnitCombo2);
+        // Price
+        double price = pricePerMiligram * noOfMiligrams;
+        String priceStr = formatter.format(price);
 
-		if(new Double(costPerMiligram * noOfMiligrams).equals(Double.NaN))
-		costArea.setText(getCostString()+localeZero());
-		else
-		costArea.setText(getCostString()+formatter.format(costPerMiligram * noOfMiligrams));
-	}
+        // Making charge of one unit = Making charge % of Rate of one unit. Or making charge if directly given
+        double makingChargeOneUnit = makingChargeField.hasPercentSign() ? makingChargeField.getNumberInput()/100 * priceOfOneUnit : makingChargeField.getNumberInput();
+        // Making charge one miligram
+        double makingChargePerMiligram = makingChargeOneUnit * getWeightSelectionMgValue(weightUnitCombo2);
+        // Making charge
+        double makingCharge = makingChargePerMiligram * noOfMiligrams;
+        String makingChargeStr = formatter.format(makingCharge);
 
-	private String localeZero()
-	{
-		String fmtr = "0.";
-		for(int i=0;i<currency.getDefaultFractionDigits();i++)
-		{
-			fmtr=fmtr+"0";
-		}
-		return fmtr;
-	}
+        // Discount
+        double discount = 0.00D;
+        switch(discountOnCombo3.getSelectedItem().toString())
+        {
+            case "Price": // Discount on price
+                discount = discountField.hasPercentSign() ? discountField.getNumberInput()/100 * price : discountField.getNumberInput();
+                break;
+            case "Making": // Discount on making charge
+                discount = discountField.hasPercentSign() ? discountField.getNumberInput()/100 * makingCharge : discountField.getNumberInput();
+                break;
+            case "Total": // Discount on price + making charge
+                discount = discountField.hasPercentSign() ? discountField.getNumberInput()/100 * (price + makingCharge) : discountField.getNumberInput();
+                break;
+        }
+        String discountStr = formatter.format(discount);
 
-	private void resetUIData()
-	{
-		weightList.clear();
-		weightList.addAll(fOps.getPropertyNames());
-		mgValue.clear();
-		mgValue.addAll(fOps.getPropertyValues());
-		text2.setText(text2.getText().equals("") ? localeZero() : text2.getText());
-		text3.setText(text3.getText().equals("") ? "10" : text3.getText());
-		if(weightList==null) System.out.println("got");
-		comb1.setSelectedItem(weightList.contains(comb1.getSelectedItem()) ? comb1.getSelectedItem() : weightList.isEmpty()?"":weightList.elementAt(0));
-		comb2.setSelectedItem(((String)comb2.getSelectedItem()).equals("0") ? String.valueOf(currency.getDefaultFractionDigits()) : (String)comb2.getSelectedItem());
-		comb3.setSelectedItem(weightList.contains(comb3.getSelectedItem()) ? comb3.getSelectedItem() : weightList.isEmpty()?"":weightList.elementAt(0));
-	}
+        // GST
+        double gst;
+        String allGst[] = fOps.getValue("$taxes", "Tax-1|0.0|Tax-2|0.0|Tax-3|0.0|Tax-4|0.0").split("\\|");
+        for(int i=0; i<allGst.length; i++)
+        {
+            if(allGst[i]==null && i%2 != 0) allGst[i] = "0.0";
+            if(i%2 != 0 && allGst[i].endsWith("%")) allGst[i] = allGst[i].substring(0, allGst[i].length()-1);
+        }
+        double gstPercent = Double.parseDouble(allGst[1]) + Double.parseDouble(allGst[3]) + Double.parseDouble(allGst[5]) + Double.parseDouble(allGst[7]);
+        gst = (price + makingCharge - discount) * gstPercent/100;
+        String gstStr = formatter.format(gst);
+        String strGstPercent = formatter.format(gstPercent);
 
-	public void actionPerformed(ActionEvent ae)
-	{
-		Object src = ae.getSource();
-		if(src.equals(abtButton))
-		{
-			String s1 = "<html>Created and Developed by : Sounak Choudhury<p>E-mail Address : <a href='mailto:contact@sounaks.com'>contact@sounaks.com</a><p>The software, information and documentation<p>is provided \"AS IS\" without warranty of any<p>kind, either expressed or implied. The Readme.txt<p>file containing EULA must be read before use.<p>Suggestions and credits are Welcomed.</html>";
-                        ImageIcon imageicon = new ImageIcon(Thread.currentThread().getContextClassLoader().getResource("duke.gif"));
-			JOptionPane.showMessageDialog(new Frame(), s1, "About IndianGold...", 1, imageicon);
-		}
-		else if(src.equals(setButton))
-		{
-			box = new AddRemoveBox(this, fOps);
-			box.setVisible(true);
-			resetUIData();
-		}
-		calculateWeights();
-		calculateCost();
-	}
+        // Total
+        double total = price + makingCharge - discount + gst;
+        String totalStr = formatter.format(total);
+
+        if(new Double(pricePerMiligram * noOfMiligrams).equals(Double.NaN))
+            costArea.setText(getCostString());
+        else
+            costArea.setText(getCostString(priceStr, makingChargeStr, discountStr, strGstPercent, gstStr, totalStr));
+    }
+
+    /**
+     * Internal method to create a format string to include the number of decimal places according to the default locale.
+     * @return A string representing the number format according to default locale.
+     */
+    private String localeZero()
+    {
+        String fmtr = "0.";
+        for(int i=0;i<currency.getDefaultFractionDigits();i++)
+        {
+            fmtr=fmtr+"0";
+        }
+        return fmtr;
+    }
+
+    /**
+     * Internal method which updates the UI after settings change or initialization.
+     */
+    private void resetUIData()
+    {
+        weightList.clear();
+        weightList.addAll(fOps.getCheckedUnitNames());
+        mgValue.clear();
+        mgValue.addAll(fOps.getCheckedUnitValues());
+        rateField.setText(rateField.getText().equals("") ? localeZero() : rateField.getText());
+        noOfUnitsField.setText(noOfUnitsField.getText().equals("") ? "10" : noOfUnitsField.getText());
+        ratePane.removeMouseListener(sha); // removed because it will be re-created if ratebar is already present
+        sha=null;                          // and clickcondition settings also may have changed
+        if(weightList==null) System.out.println("Got a blank weightlist while resetUIData");
+        displayNumRows(Integer.valueOf(fOps.getValue("$numrows", "10")));
+        weightUnitCombo1.setSelectedItem(weightList.contains((String)weightUnitCombo1.getSelectedItem()) ? weightUnitCombo1.getSelectedItem() : weightList.isEmpty()?"":weightList.elementAt(0));
+        weightUnitCombo2.setSelectedItem(weightList.contains((String)weightUnitCombo2.getSelectedItem()) ? weightUnitCombo2.getSelectedItem() : weightList.isEmpty()?"":weightList.elementAt(0));
+        String unit=(String) weightUnitCombo2.getSelectedItem();
+        if(unit.contains("(") && unit.contains(")") && unit.indexOf("(") < unit.indexOf(")"))
+            l4.setText(unit.substring(unit.indexOf("(")+1, unit.indexOf(")")));
+        currency=Currency.getInstance(fOps.getValue("$currency", "USD"));
+        costArea.setText(getCostString());
+        l2.setText("Rate : "+currency.getSymbol());
+        if(fOps.getValue("$ratebar", "1").equals("1"))
+        {
+            sha=new ShowHideAdapter(); // clickcondition settings also may have changed
+            ratePane.addMouseListener(sha);
+            ratePane.setVisible(true);
+            ratePane.updateMetalUnitLabels();
+            ratePane.updateMetalRates(Double.valueOf(fOps.getValue("$convfactor", "1D"))); // this will also save the above value since it saves metal rates.
+            ratePane.setBorder(fOps.getValue("$calculator", "1").equals("1")?BorderFactory.createEtchedBorder():BorderFactory.createRaisedBevelBorder());
+            ratePane.updateToolTips();
+            pack(); // this and above code is here as without the ratebar showing, updateMetalRates method is of no use
+        }
+        else
+        {
+            ratePane.setVisible(false);
+            pack();
+        }
+        showMainPane(fOps.getValue("$calculator", "0").equals("1"), false);
+    }
+        
+    public void showMainPane(boolean show, boolean invokedByRateBar)
+    {
+        if(invokedByRateBar)
+        {
+            if(show)
+                fOps.setValue("$calculator", "1");
+            else
+                fOps.setValue("$calculator", "0");
+            fOps.saveToFile();
+        }
+        Rectangle rect=getBounds();
+        int ii=rect.x+rect.width;
+        int jj=rect.y+rect.height;
+        mainPane.setVisible(show);
+        ratePane.setBorder(fOps.getValue("$calculator", "1").equals("1")?BorderFactory.createEtchedBorder():BorderFactory.createRaisedBevelBorder());
+        pack();
+        if(show) setTitle("Indian Gold v4.0");
+        else setTitle("IGv4");
+        if(invokedByRateBar)
+        {
+            rect=getBounds();
+            setLocation(ii-rect.width,jj-rect.height);
+        }
+    }
+        
+    void settingsProc() {
+        box = new AddRemoveBox(this, fOps);
+        box.setVisible(true);
+        resetUIData();
+        ratePane.setSchedule(Integer.valueOf(fOps.getValue("$rateauto", "2")));
+    }
+
+    void updateRate(RateLabel label) {
+        if(!ratePane.fetchRatesInProgress) {
+            if(RateBar.PRECIOUS_METALS_STRING.contains(label.getName()) || RateBar.BASE_METALS_STRING.contains(label.getName()))
+                rateField.setText(label.getRate());
+            if(RateBar.PRECIOUS_METALS_STRING.contains(label.getName().toLowerCase()))
+            {
+                noOfUnitsField.setText(fOps.getValue("$punitspercurrency", "1"));
+                weightUnitCombo2.setSelectedItem(fOps.getValue("$punit", weightList.elementAt(1)));
+            }
+            else if(RateBar.BASE_METALS_STRING.contains(label.getName().toLowerCase()))
+            {
+                noOfUnitsField.setText(fOps.getValue("$bunitspercurrency", "1"));
+                weightUnitCombo2.setSelectedItem(fOps.getValue("$bunit", weightList.elementAt(1)));
+            }
+            String unit=(String) weightUnitCombo2.getSelectedItem();
+            if(unit.contains("(") && unit.contains(")") && unit.indexOf("(") < unit.indexOf(")"))
+                l4.setText(unit.substring(unit.indexOf("(")+1, unit.indexOf(")")));
+        }
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent ae)
+    {
+        Object src = ae.getSource();
+        if(src.equals(abtButton))
+        {
+            String s1 = "<html>Created and Developed by : Sounak Choudhury<p>E-mail Address : <a href='mailto:contact@sounaks.com'>contact@sounaks.com</a><p>The software, information and documentation<p>is provided \"AS IS\" without warranty of any<p>kind, either expressed or implied. The Readme.txt<p>file containing EULA must be read before use.<p>Suggestions and credits are Welcomed.</html>";
+            ImageIcon imageicon = new ImageIcon(Thread.currentThread().getContextClassLoader().getResource("duke.gif"));
+            JOptionPane.showMessageDialog(new Frame(), s1, "About IndianGold...", 1, imageicon);
+        }
+        else if(src.equals(setButton))
+        {
+            settingsProc();
+        }
+        calculateWeights();
+        calculateCost();
+    }
+
+    @Override
+    public void focusLost(FocusEvent fe)
+    {
+        calculateWeights();
+        calculateCost();
+    }
+
+    @Override
+    public void focusGained(FocusEvent fe)
+    {
+        if(fe.getSource() instanceof NumberField)
+        {
+            ((NumberField)fe.getSource()).selectAll();              
+        }
+    }
+
+    /**
+     * Only default constructor of the class responsible for creation of the main GUI.
+     */
+    public IndianGold()
+    {
+        super("Indian Gold v4.0");
+        fOps=new FileOperations(new File("units.dat"),"IndianGold4.0");
+        weightList=new Vector<String>(); //fOps.getCheckedUnitNames();
+        mgValue=new Vector<String>(); //fOps.getCheckedUnitValues();
+        sha=new ShowHideAdapter();
+        currency = Currency.getInstance(fOps.getValue("$currency", "USD"));
+        weightField=new NumberField(14, false);
+        weightField.addActionListener(this);
+        weightField.addFocusListener(this);
+        weightUnitCombo1=new JComboBox(weightList);
+        weightUnitCombo1.addActionListener(this);
+        Dimension goodDimension=new Dimension(weightField.getPreferredSize().width, weightUnitCombo1.getPreferredSize().height);
+        weightField.setPreferredSize(goodDimension);
+        weightUnitCombo1.setPreferredSize(goodDimension);
+
+        JPanel p11=new JPanel();
+        p11.add(weightField);
+        p11.add(weightUnitCombo1);
+        Icon about = getResizedIcon(UIManager.getIcon("OptionPane.informationIcon"),16,16); //new ImageIcon(url1);
+        Icon settings = getResizedIcon(UIManager.getIcon("FileChooser.detailsViewIcon"),16,16); //new ImageIcon(url2);
+        abtButton=new JButton(about);
+        abtButton.addActionListener(this);
+        setButton=new JButton(settings);
+        setButton.addActionListener(this);
+
+        l2=new JLabel("Rate : "+currency.getSymbol());
+        rateField=new NumberField(7, false);
+        rateField.addActionListener(this);
+        rateField.addFocusListener(this);
+        l3=new JLabel("per");
+        noOfUnitsField=new NumberField(2, false);
+        l4=new JLabel();
+//                l4.setVisible(false);
+        noOfUnitsField.addActionListener(this);
+        noOfUnitsField.addFocusListener(this);
+        weightUnitCombo2=new JComboBox(weightList);
+        weightUnitCombo2.setPreferredSize(goodDimension);
+        weightUnitCombo2.addActionListener(this);
+        weightUnitCombo2.setVisible(false);
+
+        JPanel p12=new JPanel(new FlowLayout(FlowLayout.LEFT));
+        p12.add(l2);
+        p12.add(rateField);
+        p12.add(l3);
+        p12.add(noOfUnitsField);
+        p12.add(weightUnitCombo2);
+        p12.add(l4);
+
+        l5=new JLabel("Making charge");
+        l6=new JLabel("Discount");
+        l7=new JLabel("on");
+        String discOn[] = {"Price", "Making", "Total"};
+        discountOnCombo3=new JComboBox(discOn);
+        discountOnCombo3.addActionListener(this);
+        makingChargeField=new NumberField(4, true);
+        makingChargeField.addActionListener(this);
+        makingChargeField.addFocusListener(this);
+        discountField=new NumberField(4, true);
+        discountField.addActionListener(this);
+        discountField.addFocusListener(this);
+
+        JPanel p13=new JPanel();
+        p13.add(l5);
+        p13.add(makingChargeField);
+        p13.add(l6);
+        p13.add(discountField);
+        p13.add(l7);
+//                p13.add(gstField);
+        p13.add(discountOnCombo3);
+
+        costArea=new JTextPane();
+        costArea.setPreferredSize(new Dimension(340,60));
+        SimpleAttributeSet attribs = new SimpleAttributeSet();
+        StyleConstants.setAlignment(attribs , StyleConstants.ALIGN_CENTER);  
+        StyleConstants.setBold(attribs , true);
+        StyleConstants.setForeground(attribs , Color.red);
+        costArea.setParagraphAttributes(attribs,true);  
+        costArea.setText(getCostString());
+        costArea.setEditable(false);
+        costArea.setFocusable(false);
+        costArea.setBorder(BorderFactory.createEtchedBorder());
+        JPanel p14=new JPanel();
+        p14.add(costArea);
+
+        JPanel p1=new JPanel();
+        p1.setLayout(new BoxLayout(p1, BoxLayout.PAGE_AXIS));
+//		JPanel p1=new JPanel(new GridLayout(3,1));
+        p1.add(p11);
+        p1.add(p12);
+        p1.add(p13);
+        p1.add(p14);
+        p1.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Calculators"));
+
+        String columnNames[]=new String[]{"Value","Unit"};
+        model = new DefaultTableModel(columnNames,weightList.size());
+        table1=new JTable(model);
+        table1.getColumnModel().getColumn(0).setPreferredWidth(150);
+        table1.getColumnModel().getColumn(1).setPreferredWidth(190);
+        DefaultTableCellRenderer rightRenderer = new DefaultTableCellRenderer();
+        rightRenderer.setHorizontalAlignment(JLabel.RIGHT );
+        table1.getColumnModel().getColumn(0).setCellRenderer( rightRenderer );
+        table1.setFocusable(false);
+        spane =new JScrollPane(table1);
+        displayNumRows(Integer.valueOf(fOps.getValue("$numrows", "10")));
+        spane.setBorder(BorderFactory.createLoweredBevelBorder());
+
+        JPanel p2=new JPanel();
+        p2.add(spane);
+        p2.setBorder(BorderFactory.createEtchedBorder());
+
+        JPanel p31=new JPanel();
+        p31.add(abtButton);
+        p31.add(setButton);
+        JPanel p3=new JPanel();
+        p3.add(p31);
+        p3.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Settings"));
+
+        mainPane = new JPanel();
+        mainPane.setLayout(new BorderLayout());
+        mainPane.add(p1,BorderLayout.NORTH);
+        mainPane.add(p2,BorderLayout.CENTER);
+        mainPane.add(p3,BorderLayout.SOUTH);
+
+        ratePane = new RateBar(fOps, (fOps.getValue("$calculator", "1").equals("1")?BorderFactory.createEtchedBorder():BorderFactory.createRaisedBevelBorder()));
+
+        setLayout(new BorderLayout());
+        add(mainPane, BorderLayout.CENTER);
+        add(ratePane, BorderLayout.EAST);
+
+        try
+        {
+            java.net.URL url1 = Thread.currentThread().getContextClassLoader().getResource("igcircle.gif");
+            Image icon = ImageIO.read(url1);
+            setIconImage(icon);
+        }
+        catch(IOException e)
+        {
+            System.out.println("Icon not found.");
+        }
+
+        resetUIData();
+    }
+
+    /**
+     * Internal method for controlling number of rows to display in the conversion table.
+     * @param num Specifies the number of rows to display.
+     */
+    private void displayNumRows(int num)
+    {
+        int hh=table1.getRowMargin()+table1.getRowHeight(0);
+        spane.setPreferredSize(new Dimension(340,num*hh+hh));
+    }
+
+    /**
+     * Resizes the given icon according to given parameters.
+     * @param icon Icon to resize.
+     * @param width Width of the resized icon.
+     * @param height Height of the resized icon.
+     * @return Returns the icon after resizing.
+     */
+    public final Icon getResizedIcon(Icon icon, int width, int height)
+    {
+        SafeIcon ico = new SafeIcon(icon);
+        BufferedImage image = new BufferedImage(ico.getIconWidth(), ico.getIconHeight(), BufferedImage.TYPE_INT_ARGB);
+        ico.paintIcon(new JButton(), image.getGraphics(), 0, 0);
+        Image tmpImg = image.getScaledInstance(width, height, Image.SCALE_AREA_AVERAGING);
+        return new ImageIcon(tmpImg);
+    }
+
+    /**
+     * Gets the screen center location for the given container.
+     * @param cont container to be posited at screen center.
+     * @return Returns a perfect screen center location for the given container.
+     */
+    public static Dimension getScreenCenterLocation(Container cont)
+    {
+        Dimension window = cont.getSize();
+        Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
+        int X = (screen.width / 2) - (window.width / 2); // Center horizontally.
+        int Y = (screen.height / 2) - (window.height / 2); // Center vertically.
+        return new Dimension(X,Y);
+    }
+
+
+    private class ShowHideAdapter extends ClickCountAdapter
+    {
+        boolean doubleClickForShowHide, doubleRightClickForRefresh;
+        //Timer timer;
+        int condition;
+
+        public ShowHideAdapter() 
+        {
+            condition=0;
+            doubleClickForShowHide=fOps.getValue("$clickcondition", "1").equals("1");
+            // true = Single click for show/hide. Double click for settings.
+            // false = Double click for show/hide. Right click for settings.
+            doubleRightClickForRefresh=fOps.getValue("$rateauto", "0").equals("0");
+            // true = Double right click for fetch rates.
+        }
 
         @Override
-	public void focusLost(FocusEvent fe)
-	{
-		calculateWeights();
-		calculateCost();
-	}
+        public void singleClick(MouseEvent e)
+        {
+            if(SwingUtilities.isRightMouseButton(e))
+            { // right single click required.
+                if(doubleClickForShowHide) condition=0; // right single click not required for doubleClickForShowHide
+                else
+                {
+                    showMainPane(!fOps.getValue("$calculator", "0").equals("1"), true); //if showing then false else show
+                } // right single click to show/hide
+            }
+            else
+            { // left single click required.
+                if(doubleClickForShowHide)
+                {
+                    if(e.getSource() instanceof RateLabel) updateRate((RateLabel)e.getSource());
+                    calculateWeights();
+                    calculateCost();
+                } // left single click 
+                else condition=0; // left single click not required for doubleClickForShowHide=false
+            }
+        }
 
         @Override
-	public void focusGained(FocusEvent fe)
-	{
-		if(fe.getSource() instanceof NumberField)
-		{
-			/*SwingUtilities.invokeLater(new Runnable()
-			{
-				public void run()
-				{*/
-					((NumberField)fe.getSource()).selectAll();              
-				/*}
-			});*/
-		}
-	}
+        public void doubleClick(MouseEvent e)
+        {
+            if(SwingUtilities.isRightMouseButton(e))
+            {
+                if(doubleRightClickForRefresh) ratePane.fetchRates();
+            }
+            else
+            { // left double click required.
+                if(doubleClickForShowHide)
+                {
+                    showMainPane(!fOps.getValue("$calculator", "0").equals("1"), true); //if showing then false else show
+                } // left double click for settings.
+                else
+                {
+                    if(e.getSource() instanceof RateLabel) updateRate((RateLabel)e.getSource());
+                    calculateWeights();
+                    calculateCost();
+                } // left double click for show/hide.
+            }
+        }
+    }
 
-	public IndianGold()
-	{
-		super("Indian Gold v3.0");
-
-		fOps=new FileOperations(new File("units.dat"),"IndianGold3.0");
-		weightList=new Vector<String>(); //fOps.getPropertyNames();
-		mgValue=new Vector<String>(); //fOps.getPropertyValues();
-		Locale locale = Locale.getDefault();
-		currency = Currency.getInstance(locale);
-		text1=new NumberField(14);
-		text1.addActionListener(this);
-		text1.addFocusListener(this);
-		comb1=new JComboBox(weightList);
-		comb1.addActionListener(this);
-		Dimension goodDimension=new Dimension(text1.getPreferredSize().width, comb1.getPreferredSize().height);
-		text1.setPreferredSize(goodDimension);
-		comb1.setPreferredSize(goodDimension);
-
-		JPanel p11=new JPanel();
-		p11.add(text1);
-		p11.add(comb1);
-		String nums[]=new String[]{"0","1","2","3","4","5","6","7","8","9","10","11","12"};
-		comb2=new JComboBox(nums);
-		comb2.addActionListener(this);
-		//java.net.URL url1 = this.getClass().getResource("info.gif");
-		//java.net.URL url2 = this.getClass().getResource("gears.gif");
-		Icon about = getResizedIcon(UIManager.getIcon("OptionPane.informationIcon"),16,16); //new ImageIcon(url1);
-		Icon settings = getResizedIcon(UIManager.getIcon("FileChooser.detailsViewIcon"),16,16); //new ImageIcon(url2);
-		abtButton=new JButton(about);
-		abtButton.addActionListener(this);
-		setButton=new JButton(settings);
-		setButton.addActionListener(this);
-
-		l1=new JLabel("Number of decimal places: ");
-		JPanel p12=new JPanel();
-		p12.add(l1);
-		p12.add(comb2);
-		p12.add(abtButton);
-		p12.add(setButton);
-
-		JPanel p1=new JPanel(new GridLayout(2,1));
-		p1.add(p11);
-		p1.add(p12);
-		p1.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Weight Calculations"));
-
-		String columnNames[]=new String[]{"Value","Unit"};
-		model = new DefaultTableModel(columnNames,weightList.size());
-		table1=new JTable(model);
-		table1.getColumnModel().getColumn(0).setPreferredWidth(190);
-		table1.getColumnModel().getColumn(1).setPreferredWidth(150);
-		DefaultTableCellRenderer rightRenderer = new DefaultTableCellRenderer();
-		rightRenderer.setHorizontalAlignment(JLabel.RIGHT );
-		table1.getColumnModel().getColumn(0).setCellRenderer( rightRenderer );
-		table1.setFocusable(false);
-		spane =new JScrollPane(table1);
-		displayNumRows(8);
-		spane.setBorder(BorderFactory.createLoweredBevelBorder());
-
-		JPanel p2=new JPanel();
-		p2.add(spane);
-		p2.setBorder(BorderFactory.createEtchedBorder());
-
-		l2=new JLabel("Rate : "+currency.getSymbol());
-		text2=new NumberField(5);
-		text2.addActionListener(this);
-		text2.addFocusListener(this);
-		l3=new JLabel("per");
-		text3=new NumberField(2);
-		text3.addActionListener(this);
-		text3.addFocusListener(this);
-		comb3=new JComboBox(weightList);
-		comb3.setPreferredSize(goodDimension);
-		comb3.addActionListener(this);
-		JPanel p31=new JPanel();
-		p31.add(l2);
-		p31.add(text2);
-		p31.add(l3);
-		p31.add(text3);
-		p31.add(comb3);
-
-		costArea=new JTextPane();
-		costArea.setPreferredSize(new Dimension(340,40));
-		SimpleAttributeSet attribs = new SimpleAttributeSet();
-		StyleConstants.setAlignment(attribs , StyleConstants.ALIGN_CENTER);  
-		StyleConstants.setBold(attribs , true);
-		StyleConstants.setForeground(attribs , Color.red);
-		costArea.setParagraphAttributes(attribs,true);  
-		costArea.setText(getCostString()+localeZero());
-		costArea.setEditable(false);
-		costArea.setFocusable(false);
-		costArea.setBorder(BorderFactory.createEtchedBorder());
-		JPanel p32=new JPanel();
-		p32.add(costArea);
-
-		JPanel p3=new JPanel(new GridLayout(2,1));
-		p3.add(p31);
-		p3.add(p32);
-		p3.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Price Calculations"));
-
-		setLayout(new BorderLayout());
-		add(p1,BorderLayout.NORTH);
-		add(p2,BorderLayout.CENTER);
-		add(p3,BorderLayout.SOUTH);
-
-		try
-		{
-			java.net.URL url1 = Thread.currentThread().getContextClassLoader().getResource("igcircle.gif");
-			Image icon = ImageIO.read(url1);
-			setIconImage(icon);
-		}
-		catch(IOException e)
-		{
-			System.out.println("Icon not found.");
-		}
-		resetUIData();
-	}
-
-	public void displayNumRows(int num) //method for controlling number of rows to dispaly in the table
-	{
-		int hh=table1.getRowMargin()+table1.getRowHeight(0);
-		spane.setPreferredSize(new Dimension(340,num*hh+hh));
-	}
-
-	public Icon getResizedIcon(Icon icon, int width, int height)
-	{
-		SafeIcon ico = new SafeIcon(icon);
-		BufferedImage image = new BufferedImage(ico.getIconWidth(), ico.getIconHeight(), BufferedImage.TYPE_INT_ARGB);
-		ico.paintIcon(new JButton(), image.getGraphics(), 0, 0);
-		Image tmpImg = image.getScaledInstance(width, height, Image.SCALE_AREA_AVERAGING);
-		return new ImageIcon(tmpImg);
-	}
-
-	public static Dimension getScreenCenterLocation(Container cont)
-	{
-		Dimension window = cont.getSize();
-		Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
-		int X = (screen.width / 2) - (window.width / 2); // Center horizontally.
-		int Y = (screen.height / 2) - (window.height / 2); // Center vertically.
-		return new Dimension(X,Y);
-	}
-
-	public static void main(String args[])
-	{
-		IndianGold mm=new IndianGold();
-		mm.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		mm.pack();
-		Dimension loc=getScreenCenterLocation(mm);
-		mm.setLocation(loc.width,loc.height);
-		mm.setResizable(false);
-		mm.setVisible(true);
-	}
+    /**
+     * Main method. Main event dispatch thread.
+     * @param args No parameters.
+     */
+    public static void main(String args[])
+    {
+        IndianGold mm=new IndianGold();
+        mm.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        mm.pack();
+        Dimension loc=getScreenCenterLocation(mm);
+        mm.setLocation(loc.width,loc.height);
+        mm.setResizable(false);
+        mm.setVisible(true);
+    }
 }

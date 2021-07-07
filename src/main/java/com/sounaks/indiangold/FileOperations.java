@@ -21,12 +21,10 @@ import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
- * @author Sounak
+ * @author Sounak Choudhury
  */
 class FileOperations
 {
@@ -35,10 +33,15 @@ class FileOperations
 	private InputStream fin = null;
 	private File propFile;
 	private String header;
-	private Vector <String>data1;
-	private Vector <String>data2;
+	private Vector <String>allUnitNames;
+	private Vector <String>allUnitValues;
+	private Vector <String>allMetalNames;
+	private Vector <String>allMetalRates;
 	boolean modify;
 	
+        /**
+         * This internal method is the one actually responsible to load the system properties file from the file system. This is called from the constructor.
+         */
 	private void loadData()
 	{
 		/*fout=null;
@@ -74,23 +77,42 @@ class FileOperations
 		{
 			System.out.println("Error reading file.");
 		}
-		loadVectors();
+		loadUnitVectors();
+                loadMetalAndRateVectors();
 	}
 
-	private void loadVectors()
+        /**
+         * This internal method fills the unit vectors namely data1 and allUnitValues from the software properties table.
+         */
+	private void loadUnitVectors()
 	{
-		data1.removeAllElements();
-		data2.removeAllElements();
+		allUnitNames.removeAllElements();
+		allUnitValues.removeAllElements();
 		Enumeration enum1=props.propertyNames();
 		for(;enum1.hasMoreElements();)
 		{
-			String tmp=enum1.nextElement().toString().toLowerCase();
+                    String tmp=enum1.nextElement().toString().toLowerCase();
+                    if(tmp.startsWith("*") || tmp.startsWith("_"))
+                    {
 			String tmp1=getValue(tmp,"");
-			data1.addElement(tmp);
-			data2.addElement(tmp1);
+			allUnitNames.addElement(tmp);
+			allUnitValues.addElement(tmp1);
+                    }
 		}
+                if(allUnitNames.isEmpty())
+                {
+                    setValue("*troy ounce (oz t)", "3.215074656862798E-5");
+                    setValue("*pound (lb)", "2.204619999998249E-6");
+                    saveToFile();
+                    loadUnitVectors();
+                }
 	}
 	
+        /**
+         * The only constructor of this class responsible to load the software properties file from the file system, initialization of the software properties and the unit vectors.
+         * @param file The file to be loaded as properties file.
+         * @param hdr The header of the loaded file.
+         */
 	FileOperations(File file, String hdr)
 	{
 		// Getting general path for this jar file...
@@ -149,15 +171,21 @@ class FileOperations
 				System.out.println("Protection domain or code source for this jar file not found.");
 			}
 		}
+//		System.out.println(path);
 
 		propFile=new File(path.endsWith(file.getName())?path.replaceAll(file.getName(), ""):path, file.getName());
 		header=hdr;
-		data1=new Vector<String>();
-		data2=new Vector<String>();
+		allUnitNames=new Vector<String>();
+		allUnitValues=new Vector<String>();
+                allMetalNames=new Vector<String>();
+                allMetalRates=new Vector<String>();
 		loadData();
 		modify = false;
 	}
 	
+        /**
+         * This method saves the properties file of this software in the file system.
+         */
 	public void saveToFile()
 	{
 		try
@@ -180,10 +208,14 @@ class FileOperations
                     e.printStackTrace();
                 }
 		tmpProps.clear();
-		loadVectors();
+		loadUnitVectors();
+                loadMetalAndRateVectors();
 		modify = false;
 	}
 
+        /**
+         * This method is used to discard any changes made in the properties table used in this software.
+         */
 	public void discard()
 	{
 		if(modify)
@@ -191,69 +223,143 @@ class FileOperations
 			props.clear();
 			props.putAll(tmpProps);
 			tmpProps.clear();
-			loadVectors();
+			loadUnitVectors();
 			modify = false;
 		}
 	}
 
-	public Properties getAllProperties()
+        /**
+         * Gets the current set of properties table used by this software.
+         * @return Properties object containing current data set.
+         */
+        public Properties getAllProperties()
 	{
 		return props;
 	}
 	
-	public Vector<String> getPropertyNames()
+        /**
+         * Gets a vector containing the list of only those unit names from the unit list which are checked.
+         * @return A vector containing the list of only those unit names from the unit list which are checked.
+         */
+	public Vector<String> getCheckedUnitNames()
 	{
-		Vector<String> newvec = new Vector<String>(data1.size());
-		for(int i=0; i<data1.size(); i++)
+		Vector<String> newvec = new Vector<String>(allUnitNames.size());
+		for(int i=0; i<allUnitNames.size(); i++)
 		{
-			if(data1.elementAt(i).startsWith("default_")) continue;
-			newvec.addElement(data1.elementAt(i));
+			if(allUnitNames.elementAt(i).startsWith("*"))
+                            newvec.addElement((String)allUnitNames.elementAt(i).substring(1));
 		}
 		newvec.trimToSize();
 		return newvec;
 	}
 
-	public Vector<String> getAllPropertyNames()
+        /**
+         * Gets a vector containing the list of all the unit names in the unit list.
+         * @return A vector containing list of all the unit names in the unit list.
+         */
+	public Vector<String> getAllUnitNames()
 	{
-		return data1;
+		return allUnitNames;
 	}
 
-	public Vector<String> getPropertyValues()
+        /**
+         * Gets a vector containing the list of only those unit values from the unit list which are checked.
+         * @return A vector containing the list of only those unit values from the unit list which are checked.
+         */
+	public Vector<String> getCheckedUnitValues()
 	{
-		Vector<String> newvec = new Vector<String>(data2.size());
-		for(int i=0; i<data2.size(); i++)
+		Vector<String> newvec = new Vector<String>(allUnitValues.size());
+		for(int i=0; i<allUnitValues.size(); i++)
 		{
-			if(data1.elementAt(i).startsWith("default_")) continue;
-			newvec.addElement(data2.elementAt(i));
+			if(allUnitNames.elementAt(i).startsWith("*"))
+                            newvec.addElement(allUnitValues.elementAt(i));
 		}
 		newvec.trimToSize();
 		return newvec;
 	}
 
-	public Vector<String> getAllPropertyValues()
+        /**
+         * Gets a vector list containing values of all the units in the unit list.
+         * @return A vector containing values of all the units in the unit list.
+         */
+	public Vector<String> getAllUnitValues()
 	{
-		return data2;
+		return allUnitValues;
 	}
 
+        /**
+         * Gets the unit value of the given unit. If the given unit is not present, then the given value is returned.
+         * @param pName The name of the unit for which the value is to be found and returned.
+         * @param pValue The value to be returned in case either the given unit is not found or no value for the given unit is found.
+         * @return A string containing the value for the given unit.
+         */
 	public String getValue(String pName,String pValue)
 	{
 		return props.getProperty(pName, pValue);
 	}
-	
+        
+	/**
+         * Sets i.e. adds the given unit if the unit is not present or updates if the given unit is already present in the unit list, with the given value.
+         * @param pName The unit name to be added or updated.
+         * @param pValue The value to be assigned to the given unit name.
+         */
 	public void setValue(String pName,String pValue)
 	{
-		if(!modify) tmpProps.putAll(props);
-		pName=pName.toLowerCase();
-		props.put(pName,pValue);
-		loadVectors();
-		modify = true;
+            if(!modify)
+                tmpProps.putAll(props);
+            pName=pName.toLowerCase();
+            props.put(pName,pValue);
+            loadUnitVectors();
+            loadMetalAndRateVectors();
+            modify = true;
 	}
 	
+        /**
+         * Removes the given unit from the property/unit list. Does nothing if the given unit is not found in the unit list.
+         * @param pName Specifies the unit to be removed.
+         */
 	public void removeValue(String pName)
 	{
-		if(!modify) tmpProps.putAll(props);
-		props.remove(pName);
-		loadVectors();
-		modify = true;
+            if(!modify)
+                tmpProps.putAll(props);
+            props.remove(pName);
+            loadUnitVectors();
+            loadMetalAndRateVectors();
+            modify = true;
 	}
+        
+        private void loadMetalAndRateVectors()
+        {
+		allMetalNames.removeAllElements();
+		allMetalRates.removeAllElements();
+		Enumeration enum1=props.propertyNames();
+		for(;enum1.hasMoreElements();)
+		{
+                    String tmp=enum1.nextElement().toString().toLowerCase();
+                    if(tmp.startsWith("@"))
+                    {
+			String tmp1=getValue(tmp,"");
+			allMetalNames.addElement(tmp);
+			allMetalRates.addElement(tmp1);
+                    }
+		}
+        }
+
+        /**
+         * Gets a vector containing rates of all the metals obtained and saved from the web during last session.
+         * @return A Vector containing rates of all the metals saved in the software properties file.
+         */
+        public Vector<String> getAllMetalRates()
+        {
+            return allMetalRates;
+        }
+
+        /**
+         * Gets a vector containing all the metals for which rates are obtained or to be obtained.
+         * @return A Vector containing names of all the metals saved in the software properties file.
+         */
+        public Vector<String> getAllMetalNames()
+        {
+            return allMetalNames;
+        }
 }

@@ -16,15 +16,18 @@
  */
 package com.sounaks.indiangold;
 
+import java.awt.BorderLayout;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.Vector;
 import javax.swing.*;
-import java.awt.*;
-import java.awt.event.*;
-import java.util.*;
-import java.io.*;
 
 /**
  *
- * @author Sounak
+ * @author Sounak Choudhury
  */
 class MetricAdder extends JDialog implements ActionListener
 {
@@ -43,14 +46,15 @@ class MetricAdder extends JDialog implements ActionListener
 		for(int i=0; i<listContents.size(); i++)
 		{
 			String tmp = listContents.elementAt(i);
-			contents.addElement(tmp.startsWith("default_") ? tmp.substring(tmp.indexOf("_")+1) : tmp);
+                        if(tmp.startsWith("_") || tmp.startsWith("*"))
+                            contents.addElement(tmp.substring(1));
 		}
 		l1=new JLabel("Number of Units");
-		n1=new NumberField(10);
+		n1=new NumberField(10, false);
 		l2=new JLabel("Unit Name");
 		t1=new JTextField(10);
 		l3=new JLabel("Amount");
-		n2=new NumberField(10);
+		n2=new NumberField(10, false);
 		j1=new JComboBox(contents);
 		j1.setPreferredSize(t1.getPreferredSize());
 		if(!(val == null || val.equals(null) || val.equals("")) && contents.contains(val))
@@ -106,6 +110,7 @@ class MetricAdder extends JDialog implements ActionListener
 		Dimension dim = IndianGold.getScreenCenterLocation(adder);
 		adder.setLocation(dim.width, dim.height);
 		adder.setVisible(true);
+                if(adder.newMetric[0] != null) adder.newMetric[0]="*"+adder.newMetric[0]; //adds check mark to the new unit.
 		return adder.newMetric;
 	}
 
@@ -124,6 +129,7 @@ class MetricAdder extends JDialog implements ActionListener
 		else return false;
 	}
 		
+    @Override
 	public void actionPerformed(ActionEvent ae)
 	{
 		Object src=ae.getSource();
@@ -160,7 +166,7 @@ class MetricAdder extends JDialog implements ActionListener
 		}
 	}
 	
-	public static void main(String args[])
+	/*public static void main(String args[]) //for class standalone testing
 	{
 		FileOperations flop=new FileOperations(new File("Command.props"),"Co_propo");
 		Vector <String>wl=flop.getPropertyNames();
@@ -169,5 +175,5 @@ class MetricAdder extends JDialog implements ActionListener
 		{
 			System.out.println(ss[i]);
 		}
-	}
+	}*/
 }

@@ -3,9 +3,14 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.sounaks</groupId>
     <artifactId>IndianGold</artifactId>
-    <version>3.0-SNAPSHOT</version>
+    <version>4.0-SNAPSHOT</version>
     <packaging>jar</packaging>
     <dependencies>
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.13.1</version>
+        </dependency>
     </dependencies>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -15,9 +20,15 @@
     <build>
         <plugins>
             <plugin>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>2.4</version>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
                 <configuration>
+                    <!-- get all project dependencies -->
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                    <appendAssemblyId>false</appendAssemblyId>
+                    <!-- MainClass in mainfest make a executable jar -->
                     <archive>
                         <manifest>
                             <mainClass>com.sounaks.indiangold.IndianGold</mainClass>
@@ -26,10 +37,11 @@
                 </configuration>
                 <executions>
                     <execution>
-                        <id>default-jar</id>
-                        <phase>package</phase>
+                        <id>make-assembly</id>
+                        <!-- bind to the packaging phase -->
+                        <phase>package</phase> 
                         <goals>
-                            <goal>jar</goal>
+                            <goal>single</goal>
                         </goals>
                     </execution>
                 </executions>
@@ -38,13 +50,13 @@
     </build>
     <name>IndianGold</name>
     <description>IndianGold is not just another weight conversion tool. It is focussed at converting som
-local indian weight units such as ratti, tola, bhori, etc. in addition to standard units.
-It has a simple convenient user interface which converts to multiple units with press of 
-tab or enter key. All converted units are displayed at once so that user don't have to 
-select a particular output unit; this also helps in comparing units with respect to each 
-other. It supports precision upto 12 decimal places for higher precision. An additional 
-feature constitutes the bottom panel which supports calculation of price of the given 
-weight. The standard market rate can be put to get the price of the required unit. The
-user interface is intuitive and almost any user can begin using it without help.
-</description>
+        local indian weight units such as ratti, tola, bhori, etc. in addition to standard units.
+        It has a simple convenient user interface which converts to multiple units with press of 
+        tab or enter key. All converted units are displayed at once so that user don't have to 
+        select a particular output unit; this also helps in comparing units with respect to each 
+        other. It supports precision upto 12 decimal places for higher precision. An additional 
+        feature constitutes the bottom panel which supports calculation of price of the given 
+        weight. The standard market rate can be put to get the price of the required unit. The
+        user interface is intuitive and almost any user can begin using it without help.
+    </description>
 </project>

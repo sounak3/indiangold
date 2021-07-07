@@ -19,18 +19,53 @@ My contact e-mail: sounak3@gmail.com, phone: +91-9595949401.
 
 package com.sounaks.indiangold;
 
-import javax.swing.*;
-import java.awt.event.*;
+/**
+ *
+ * @author Sounak Choudhury
+ */
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import javax.swing.JTextField;
 
 public class NumberField extends JTextField implements KeyListener
 {
-    public NumberField(int width)
+    boolean percentAllowed;
+    public NumberField(int width, boolean percentAllowed)
     {
         super(width);
         super.setHorizontalAlignment(RIGHT );
         super.addKeyListener(this);
+        this.percentAllowed = percentAllowed;
     }
 
+    /**
+     * Private method to parse the number out of the number text fields. 
+     * @return Parsed double number from the text field.
+     */
+    public double getNumberInput() throws NumberFormatException
+    {
+        double input;
+        String fullText = this.getText();
+        if(fullText == null || fullText.equals(""))
+            fullText = "0.0";
+        if(fullText.contains("%") && !fullText.endsWith("%"))
+            throw new NumberFormatException("Percent sign in middle of number.");
+        else if(fullText.endsWith("%"))
+            input=Double.parseDouble(fullText.substring(0, fullText.length()-1));
+        else
+            input=Double.parseDouble(fullText);
+        return input;
+    }
+
+    /**
+     * Private method to check the percent sign in the number text fields. 
+     * @return True if the text field has a percent sign, else will return false.
+     */
+    public boolean hasPercentSign()
+    {
+        return this.getText().contains("%");
+    }
+    
     @Override
     public void keyTyped(KeyEvent e)
     {
@@ -42,16 +77,25 @@ public class NumberField extends JTextField implements KeyListener
         }
         else if((c == '.') && (ss.length() > 0))
         {
-            for(int i=0; i<ss.length(); i++)
+            if(ss.contains(".") || (ss.contains("%") && percentAllowed))
             {
-                if(ss.substring(i,i+1).equals("."))
-                {
-                    getToolkit().beep();
-                    e.consume();
-                }
+                getToolkit().beep();
+                e.consume();
             }
         }
-        else if (!((c >= '0') && (c <= '9') || (c == KeyEvent.VK_BACK_SPACE) || (c == KeyEvent.VK_DELETE) || (c == KeyEvent.VK_ENTER)))
+        else if((c == '%') && percentAllowed && (ss.length() > 0))
+        {
+            if(ss.contains("%"))
+            {
+                getToolkit().beep();
+                e.consume();
+            }
+        }
+        else if (!((c >= '0') && (c <= '9') 
+                || (c == KeyEvent.VK_BACK_SPACE) 
+                || (c == KeyEvent.VK_DELETE) 
+                || (c == KeyEvent.VK_ENTER))
+                || ss.endsWith("%"))
         {
             getToolkit().beep();
             e.consume();
@@ -60,6 +104,7 @@ public class NumberField extends JTextField implements KeyListener
 
     @Override
     public void keyPressed(KeyEvent e) {}
+
     @Override
     public void keyReleased(KeyEvent e)
     {
