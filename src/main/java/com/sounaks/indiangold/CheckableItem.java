@@ -44,10 +44,7 @@ public class CheckableItem
 
         public void setSelected(boolean b) 
         {
-                if(b)
-                        isSelected = true;
-                else
-                        isSelected = false;
+            isSelected = b;
         }
 
         public boolean isSelected() 

@@ -42,7 +42,7 @@ import javax.swing.*;
 
 public class SafeIcon implements Icon {
 
-    private Icon wrappee;
+    private final Icon wrappee;
     private Icon standIn;
 
     public SafeIcon(Icon wrappee) {
@@ -83,9 +83,10 @@ public class SafeIcon implements Icon {
             Class<?> clazz = getClass(e);
             JComponent standInComponent = getSubstitute(clazz);
             standIn = createImageIcon(standInComponent, x, y);
-        } catch (Exception e1) {
+        } catch (ClassNotFoundException | IllegalAccessException e1) {
             // something went wrong - fallback to this painting
             standIn = this;
+            System.out.println(e1.getMessage());
         } 
     }
 

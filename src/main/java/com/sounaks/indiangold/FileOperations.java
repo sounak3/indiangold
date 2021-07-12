@@ -32,7 +32,7 @@ class FileOperations
 	private FileOutputStream fout = null;
 	private InputStream fin = null;
 	private File propFile;
-	private String header;
+	private final String header;
 	private Vector <String>allUnitNames;
 	private Vector <String>allUnitValues;
 	private Vector <String>allMetalNames;
@@ -203,9 +203,9 @@ class FileOperations
 			props.store(fout, header);
 			fout.close();
 		}
-		catch(Exception e)
+		catch(IOException e)
 		{
-                    e.printStackTrace();
+                    System.out.println(e.getMessage());
                 }
 		tmpProps.clear();
 		loadUnitVectors();

@@ -43,27 +43,32 @@ import javax.swing.text.StyleConstants;
  * 
  * @author Sounak Choudhury
  */
-public class IndianGold extends JFrame implements ActionListener, FocusListener
+public class IndianGold extends JFrame
 {
-    //String weightList[]=new String[]{"miligrams (mg)","grams (g)","kilograms (kg)","ratti (rt)","grains (gr)","carats (ct)","ounces (oz)","pounds (lb)","cents (pts)","bengal bhori (old tola)","tola (per 10 grams)", "gujrati tola"};
-    //Double mgValue[]=new Double[]{1.000000000000,0.001000000000,0.000001000000,0.005494510000,0.015432400000,0.005000000000,0.000035274000,0.000002204620,0.500000000000,0.000085733882,0.000100000000,0.000083333333};
     Vector <String>weightList;
     Vector <String>mgValue;
     FileOperations fOps;
     AddRemoveBox box;
-    JLabel l1, l2, l3, l4, l5, l6, l7;
+    JLabel labelWt, labelRate1, labelRate2, labelWeightUnit, labelMakingChrg, labelDiscount1, labelDiscount2, numTax1fix, numTax2fix, numTax3fix, labelTax1, labelTax2, labelTax3;
     JTextPane costArea;
-    NumberField weightField, rateField, noOfUnitsField, makingChargeField, discountField;
+    NumberField weightField, rateField, noOfUnitsField, makingChargeField, discountField, numTax1Field, numTax2Field, numTax3Field;
+    JTextField labelTax1EditField, labelTax2EditField, labelTax3EditField;
     JTable table1;
     JComboBox weightUnitCombo1, weightUnitCombo2, discountOnCombo3;
     DecimalFormat formatter;
     DefaultTableModel model;
-    JButton abtButton, setButton;
+    JButton abtButton, setButton, taxButton, rateBarButton, ok1, ok2;
     JScrollPane spane;
-    JPanel mainPane;
+    private final JPanel mainPane, p12, p32, rp320, rp321, rp322;
     RateBar ratePane;
     Currency currency;
-    ShowHideAdapter sha;
+    ShowHideAdapter shAdapter;
+    CardAdapter cAdapter;
+    NumberFieldFocusAdapter fAdapter;
+    PrivateActionAdapter aAdapter;
+    private final CardLayout cards;
+    boolean nowcard = true;
+    boolean taxBoxActivated = false;
 
     /**
      * Internal method to make the sentence to be displayed in the price panel.
@@ -71,14 +76,6 @@ public class IndianGold extends JFrame implements ActionListener, FocusListener
      */
     private String getCostString(String cost, String mkCharge, String discount, String gstPercent, String gst, String total)
     {
-//        String costString = "Net wt.: ";
-//        if(weightField.getText().equals("") || weightField.getText() == null) costString = costString + "0";
-//        else costString = costString + weightField.getText();
-//        String currSymbol = currency.getSymbol();
-//        costString = costString + " " + (String)weightUnitCombo1.getSelectedItem() + "\n Total: " + currSymbol
-//                + total + ". (Price " + currSymbol + cost + ", making charge " + currSymbol + mkCharge 
-//                + ", discount " + currSymbol + discount + " and " + currSymbol + gst + " GST)";
-        
         String currSymbol = currency.getSymbol();
         String costString = "Total: " + currSymbol + " " + total + ". (Base price: " + currSymbol + " " 
                 + cost + ", Making charge: " + currSymbol + " " + mkCharge + ", Discount: " + currSymbol 
@@ -213,13 +210,13 @@ public class IndianGold extends JFrame implements ActionListener, FocusListener
 
         // GST
         double gst;
-        String allGst[] = fOps.getValue("$taxes", "Tax-1|0.0|Tax-2|0.0|Tax-3|0.0|Tax-4|0.0").split("\\|");
+        String allGst[] = fOps.getValue("$taxes", "Tax-1|0.0|Tax-2|0.0|Tax-3|0.0").split("\\|");
         for(int i=0; i<allGst.length; i++)
         {
             if(allGst[i]==null && i%2 != 0) allGst[i] = "0.0";
             if(i%2 != 0 && allGst[i].endsWith("%")) allGst[i] = allGst[i].substring(0, allGst[i].length()-1);
         }
-        double gstPercent = Double.parseDouble(allGst[1]) + Double.parseDouble(allGst[3]) + Double.parseDouble(allGst[5]) + Double.parseDouble(allGst[7]);
+        double gstPercent = Double.parseDouble(allGst[1]) + Double.parseDouble(allGst[3]) + Double.parseDouble(allGst[5]);
         gst = (price + makingCharge - discount) * gstPercent/100;
         String gstStr = formatter.format(gst);
         String strGstPercent = formatter.format(gstPercent);
@@ -259,35 +256,28 @@ public class IndianGold extends JFrame implements ActionListener, FocusListener
         mgValue.addAll(fOps.getCheckedUnitValues());
         rateField.setText(rateField.getText().equals("") ? localeZero() : rateField.getText());
         noOfUnitsField.setText(noOfUnitsField.getText().equals("") ? "10" : noOfUnitsField.getText());
-        ratePane.removeMouseListener(sha); // removed because it will be re-created if ratebar is already present
-        sha=null;                          // and clickcondition settings also may have changed
+        ratePane.removeMouseListener(shAdapter); // removed because it will be re-created if ratebar is already present
+        shAdapter=null;                          // and clickcondition settings also may have changed
         if(weightList==null) System.out.println("Got a blank weightlist while resetUIData");
         displayNumRows(Integer.valueOf(fOps.getValue("$numrows", "10")));
         weightUnitCombo1.setSelectedItem(weightList.contains((String)weightUnitCombo1.getSelectedItem()) ? weightUnitCombo1.getSelectedItem() : weightList.isEmpty()?"":weightList.elementAt(0));
         weightUnitCombo2.setSelectedItem(weightList.contains((String)weightUnitCombo2.getSelectedItem()) ? weightUnitCombo2.getSelectedItem() : weightList.isEmpty()?"":weightList.elementAt(0));
         String unit=(String) weightUnitCombo2.getSelectedItem();
         if(unit.contains("(") && unit.contains(")") && unit.indexOf("(") < unit.indexOf(")"))
-            l4.setText(unit.substring(unit.indexOf("(")+1, unit.indexOf(")")));
+            labelWeightUnit.setText(unit.substring(unit.indexOf("(")+1, unit.indexOf(")")));
         currency=Currency.getInstance(fOps.getValue("$currency", "USD"));
         costArea.setText(getCostString());
-        l2.setText("Rate : "+currency.getSymbol());
-        if(fOps.getValue("$ratebar", "1").equals("1"))
-        {
-            sha=new ShowHideAdapter(); // clickcondition settings also may have changed
-            ratePane.addMouseListener(sha);
-            ratePane.setVisible(true);
-            ratePane.updateMetalUnitLabels();
-            ratePane.updateMetalRates(Double.valueOf(fOps.getValue("$convfactor", "1D"))); // this will also save the above value since it saves metal rates.
-            ratePane.setBorder(fOps.getValue("$calculator", "1").equals("1")?BorderFactory.createEtchedBorder():BorderFactory.createRaisedBevelBorder());
-            ratePane.updateToolTips();
-            pack(); // this and above code is here as without the ratebar showing, updateMetalRates method is of no use
-        }
-        else
-        {
-            ratePane.setVisible(false);
-            pack();
-        }
+        labelRate1.setText("Rate : "+currency.getSymbol());
+        showRateBar(fOps.getValue("$ratebar", "1").equals("1"));
         showMainPane(fOps.getValue("$calculator", "0").equals("1"), false);
+        String taxes[] = fOps.getValue("$taxes", "Tax-1|0.0|Tax-2|0.0|Tax-3|0.0").split("\\|");
+        labelTax1.setText(taxes[0]);
+        numTax1Field.setText(taxes[1]);
+        labelTax2.setText(taxes[2]);
+        numTax2Field.setText(taxes[3]);
+        labelTax3.setText(taxes[4]);
+        numTax3Field.setText(taxes[5]);
+        cards.show(p32, "MAIN");
     }
         
     public void showMainPane(boolean show, boolean invokedByRateBar)
@@ -314,7 +304,46 @@ public class IndianGold extends JFrame implements ActionListener, FocusListener
             setLocation(ii-rect.width,jj-rect.height);
         }
     }
-        
+    
+    public void showRateBar(boolean show)
+    {
+        if(show)
+        {
+            shAdapter=new ShowHideAdapter(); // clickcondition settings also may have changed
+            ratePane.addMouseListener(shAdapter);
+            ratePane.setVisible(true);
+            ratePane.updateMetalUnitLabels();
+            ratePane.updateMetalRates(Double.valueOf(fOps.getValue("$convfactor", "1D"))); // this will also save the above value since it saves metal rates.
+            ratePane.setBorder(fOps.getValue("$calculator", "1").equals("1")?BorderFactory.createEtchedBorder():BorderFactory.createRaisedBevelBorder());
+            ratePane.updateToolTips();
+            pack(); // this and above code is here as without the ratebar showing, updateMetalRates method is of no use
+            if(fOps.getValue("$clickcondition", "1").equals("1"))
+            {
+                p12.setToolTipText("Click on a rate on the rate list to update here");
+                for(Component cmp : p12.getComponents())
+                    if(cmp instanceof JComponent) ((JComponent)cmp).setToolTipText("Click on a rate on the rate list to update here");
+            }
+            else
+            {
+                p12.setToolTipText("Double-click on a rate on the rate list to update here");
+                for(Component cmp : p12.getComponents())
+                    if(cmp instanceof JComponent) ((JComponent)cmp).setToolTipText("Double-click on a rate on the rate list to update here");
+            }
+            fOps.setValue("$ratebar", "1");        }
+        else
+        {
+            ratePane.removeMouseListener(shAdapter); // removed because it will be re-created if ratebar is already present
+            shAdapter=null;                          // and clickcondition settings also may have changed
+            ratePane.setVisible(false);
+            pack();
+            p12.setToolTipText(null);
+            for(Component cmp : p12.getComponents())
+                if(cmp instanceof JComponent) ((JComponent)cmp).setToolTipText(null);
+            fOps.setValue("$ratebar", "0");
+        }
+        fOps.saveToFile();
+    }
+    
     void settingsProc() {
         box = new AddRemoveBox(this, fOps);
         box.setVisible(true);
@@ -338,44 +367,109 @@ public class IndianGold extends JFrame implements ActionListener, FocusListener
             }
             String unit=(String) weightUnitCombo2.getSelectedItem();
             if(unit.contains("(") && unit.contains(")") && unit.indexOf("(") < unit.indexOf(")"))
-                l4.setText(unit.substring(unit.indexOf("(")+1, unit.indexOf(")")));
+                labelWeightUnit.setText(unit.substring(unit.indexOf("(")+1, unit.indexOf(")")));
         }
     }
 
-    @Override
-    public void actionPerformed(ActionEvent ae)
+    private class PrivateActionAdapter implements ActionListener
     {
-        Object src = ae.getSource();
-        if(src.equals(abtButton))
+        @Override
+        public void actionPerformed(ActionEvent ae)
         {
-            String s1 = "<html>Created and Developed by : Sounak Choudhury<p>E-mail Address : <a href='mailto:contact@sounaks.com'>contact@sounaks.com</a><p>The software, information and documentation<p>is provided \"AS IS\" without warranty of any<p>kind, either expressed or implied. The Readme.txt<p>file containing EULA must be read before use.<p>Suggestions and credits are Welcomed.</html>";
-            ImageIcon imageicon = new ImageIcon(Thread.currentThread().getContextClassLoader().getResource("duke.gif"));
-            JOptionPane.showMessageDialog(new Frame(), s1, "About IndianGold...", 1, imageicon);
+            Object src = ae.getSource();
+            if(src.equals(abtButton))
+            {
+                String s1 = "<html>Created and Developed by : Sounak Choudhury<p>E-mail Address : <a href='mailto:contact@sounaks.com'>contact@sounaks.com</a><p>The software, information and documentation<p>is provided \"AS IS\" without warranty of any<p>kind, either expressed or implied. The Readme.txt<p>file containing EULA must be read before use.<p>Suggestions and credits are Welcomed.</html>";
+                ImageIcon imageicon = new ImageIcon(Thread.currentThread().getContextClassLoader().getResource("duke.gif"));
+                JOptionPane.showMessageDialog(new Frame(), s1, "About IndianGold...", 1, imageicon);
+            }
+            else if(src.equals(setButton))
+            {
+                settingsProc();
+            }
+            else if(src.equals(taxButton))
+            {
+                nowcard = true;
+                cards.show(p32, "TRUE");
+            }
+            else if(src.equals(rateBarButton))
+            {
+                showRateBar(!fOps.getValue("$ratebar", "1").equals("1"));
+            }
+            else if(src.equals(ok1))
+            {
+                nowcard = false;
+                cards.show(p32, "MAIN");
+            }
+            else if(src.equals(ok2))
+            {
+                labelTax1.setText(labelTax1EditField.getText());
+                labelTax2.setText(labelTax2EditField.getText());
+                labelTax3.setText(labelTax3EditField.getText());
+                numTax1Field.setText(numTax1fix.getText());
+                numTax2Field.setText(numTax2fix.getText());
+                numTax3Field.setText(numTax3fix.getText());
+                cards.show(p32, "TRUE");
+                nowcard = true;
+                numTax1Field.requestFocus();
+            }
+            calculateWeights();
+            calculateCost();
         }
-        else if(src.equals(setButton))
-        {
-            settingsProc();
-        }
-        calculateWeights();
-        calculateCost();
     }
 
-    @Override
-    public void focusLost(FocusEvent fe)
+    private class NumberFieldFocusAdapter extends FocusAdapter
     {
-        calculateWeights();
-        calculateCost();
-    }
-
-    @Override
-    public void focusGained(FocusEvent fe)
-    {
-        if(fe.getSource() instanceof NumberField)
+        @Override
+        public void focusLost(FocusEvent fe)
         {
-            ((NumberField)fe.getSource()).selectAll();              
+            if(!(fe.getOppositeComponent() instanceof NumberField) && nowcard && taxBoxActivated)
+            {
+//                System.out.println("Save triggered from focus lost!");
+                String taxes = labelTax1.getText() + "|" + numTax1Field.getText() + "|"
+                               + labelTax2.getText() + "|" + numTax2Field.getText() + "|"
+                               + labelTax3.getText() + "|" + numTax3Field.getText();
+                fOps.setValue("$taxes", taxes);
+                fOps.saveToFile();
+                taxBoxActivated = false;
+                cards.show(p32, "MAIN");
+            }
+            calculateWeights();
+            calculateCost();
+        }
+
+        @Override
+        public void focusGained(FocusEvent fe)
+        {
+            if(numTax1Field.isFocusOwner()) taxBoxActivated = true;
+            else if(numTax2Field.isFocusOwner()) taxBoxActivated = true;
+            else if(numTax3Field.isFocusOwner()) taxBoxActivated = true;
+            else
+            {
+                if(nowcard && taxBoxActivated)
+                {
+//                    System.out.println("Save triggered from focus gained!");
+                    String taxes = labelTax1.getText() + "|" + numTax1Field.getText() + "|"
+                                   + labelTax2.getText() + "|" + numTax2Field.getText() + "|"
+                                   + labelTax3.getText() + "|" + numTax3Field.getText();
+                    fOps.setValue("$taxes", taxes);
+                    fOps.saveToFile();
+                    taxBoxActivated = false;
+                    cards.show(p32, "MAIN");
+                }
+            }
+
+            if(fe.getSource() instanceof NumberField)
+            {
+                ((NumberField)fe.getSource()).selectAll();
+            }
+            else if(fe.getSource() instanceof JTextField)
+            {
+                ((JTextField)fe.getSource()).selectAll();
+            }
         }
     }
-
+    
     /**
      * Only default constructor of the class responsible for creation of the main GUI.
      */
@@ -385,70 +479,96 @@ public class IndianGold extends JFrame implements ActionListener, FocusListener
         fOps=new FileOperations(new File("units.dat"),"IndianGold4.0");
         weightList=new Vector<String>(); //fOps.getCheckedUnitNames();
         mgValue=new Vector<String>(); //fOps.getCheckedUnitValues();
-        sha=new ShowHideAdapter();
+        shAdapter=new ShowHideAdapter();
+        fAdapter = new NumberFieldFocusAdapter();
+        aAdapter = new PrivateActionAdapter();
         currency = Currency.getInstance(fOps.getValue("$currency", "USD"));
-        weightField=new NumberField(14, false);
-        weightField.addActionListener(this);
-        weightField.addFocusListener(this);
+        JTextField[] fields = new JTextField[11];
+        labelWt = new JLabel("Wt.");
+        weightField=new NumberField(13, false);
+        weightField.addActionListener(aAdapter);
+        weightField.addFocusListener(fAdapter);
         weightUnitCombo1=new JComboBox(weightList);
-        weightUnitCombo1.addActionListener(this);
-        Dimension goodDimension=new Dimension(weightField.getPreferredSize().width, weightUnitCombo1.getPreferredSize().height);
-        weightField.setPreferredSize(goodDimension);
-        weightUnitCombo1.setPreferredSize(goodDimension);
+        weightUnitCombo1.addActionListener(aAdapter);
+        int requiredTFheight = weightUnitCombo1.getPreferredSize().height;
+        fields[0]=weightField;
+        weightUnitCombo1.setPreferredSize(new Dimension(weightField.getPreferredSize().width+15, requiredTFheight));
 
-        JPanel p11=new JPanel();
+        JPanel p11=new JPanel(new FlowLayout(FlowLayout.LEFT));
+        p11.add(labelWt);
         p11.add(weightField);
         p11.add(weightUnitCombo1);
-        Icon about = getResizedIcon(UIManager.getIcon("OptionPane.informationIcon"),16,16); //new ImageIcon(url1);
-        Icon settings = getResizedIcon(UIManager.getIcon("FileChooser.detailsViewIcon"),16,16); //new ImageIcon(url2);
-        abtButton=new JButton(about);
-        abtButton.addActionListener(this);
-        setButton=new JButton(settings);
-        setButton.addActionListener(this);
+        Icon aboutIcon = getResizedIcon(UIManager.getIcon("OptionPane.informationIcon"),16,16);
+        Icon settingsIcon = getResizedIcon(UIManager.getIcon("FileView.computerIcon"),16,16);
+        Icon taxIcon = getResizedIcon(UIManager.getIcon("FileView.fileIcon"),16,16);
+        Icon rateIcon = getResizedIcon(UIManager.getIcon("FileChooser.detailsViewIcon"),16,16);
+        abtButton=new JButton("About", aboutIcon);
+        abtButton.setHorizontalTextPosition(SwingConstants.CENTER);
+        abtButton.setVerticalTextPosition(SwingConstants.BOTTOM);
+        abtButton.addActionListener(aAdapter);
+        setButton=new JButton("Settings", settingsIcon);
+        setButton.setHorizontalTextPosition(SwingConstants.CENTER);
+        setButton.setVerticalTextPosition(SwingConstants.BOTTOM);
+        setButton.addActionListener(aAdapter);
+        taxButton=new JButton("Taxes", taxIcon);
+        taxButton.setHorizontalTextPosition(SwingConstants.CENTER);
+        taxButton.setVerticalTextPosition(SwingConstants.BOTTOM);
+        taxButton.addActionListener(aAdapter);
+        rateBarButton=new JButton("Rate Bar", rateIcon);
+        rateBarButton.setHorizontalTextPosition(SwingConstants.CENTER);
+        rateBarButton.setVerticalTextPosition(SwingConstants.BOTTOM);
+        rateBarButton.addActionListener(aAdapter);
+        ok1=new JButton("OK");
+        ok1.addActionListener(aAdapter);
+        ok2=new JButton("OK");
+        ok2.addActionListener(aAdapter);
 
-        l2=new JLabel("Rate : "+currency.getSymbol());
+        labelRate1=new JLabel("Rate : "+currency.getSymbol());
         rateField=new NumberField(7, false);
-        rateField.addActionListener(this);
-        rateField.addFocusListener(this);
-        l3=new JLabel("per");
+        fields[1]=rateField;
+        rateField.addActionListener(aAdapter);
+        rateField.addFocusListener(fAdapter);
+        labelRate2=new JLabel("per");
         noOfUnitsField=new NumberField(2, false);
-        l4=new JLabel();
-//                l4.setVisible(false);
-        noOfUnitsField.addActionListener(this);
-        noOfUnitsField.addFocusListener(this);
+        fields[2]=noOfUnitsField;
+        labelWeightUnit=new JLabel();
+//                labelWeightUnit.setVisible(false);
+        noOfUnitsField.addActionListener(aAdapter);
+        noOfUnitsField.addFocusListener(fAdapter);
         weightUnitCombo2=new JComboBox(weightList);
-        weightUnitCombo2.setPreferredSize(goodDimension);
-        weightUnitCombo2.addActionListener(this);
+//        weightUnitCombo2.setPreferredSize(goodDimension);
+        weightUnitCombo2.addActionListener(aAdapter);
         weightUnitCombo2.setVisible(false);
 
-        JPanel p12=new JPanel(new FlowLayout(FlowLayout.LEFT));
-        p12.add(l2);
+        p12=new JPanel(new FlowLayout(FlowLayout.LEFT));
+        p12.add(labelRate1);
         p12.add(rateField);
-        p12.add(l3);
+        p12.add(labelRate2);
         p12.add(noOfUnitsField);
         p12.add(weightUnitCombo2);
-        p12.add(l4);
+        p12.add(labelWeightUnit);
 
-        l5=new JLabel("Making charge");
-        l6=new JLabel("Discount");
-        l7=new JLabel("on");
+        labelMakingChrg=new JLabel("Making charge");
+        labelDiscount1=new JLabel("Discount");
+        labelDiscount2=new JLabel("on");
         String discOn[] = {"Price", "Making", "Total"};
         discountOnCombo3=new JComboBox(discOn);
-        discountOnCombo3.addActionListener(this);
+        discountOnCombo3.addActionListener(aAdapter);
         makingChargeField=new NumberField(4, true);
-        makingChargeField.addActionListener(this);
-        makingChargeField.addFocusListener(this);
+        fields[3]=makingChargeField;
+        makingChargeField.addActionListener(aAdapter);
+        makingChargeField.addFocusListener(fAdapter);
         discountField=new NumberField(4, true);
-        discountField.addActionListener(this);
-        discountField.addFocusListener(this);
+        fields[4]=discountField;
+        discountField.addActionListener(aAdapter);
+        discountField.addFocusListener(fAdapter);
 
         JPanel p13=new JPanel();
-        p13.add(l5);
+        p13.add(labelMakingChrg);
         p13.add(makingChargeField);
-        p13.add(l6);
+        p13.add(labelDiscount1);
         p13.add(discountField);
-        p13.add(l7);
-//                p13.add(gstField);
+        p13.add(labelDiscount2);
         p13.add(discountOnCombo3);
 
         costArea=new JTextPane();
@@ -467,7 +587,6 @@ public class IndianGold extends JFrame implements ActionListener, FocusListener
 
         JPanel p1=new JPanel();
         p1.setLayout(new BoxLayout(p1, BoxLayout.PAGE_AXIS));
-//		JPanel p1=new JPanel(new GridLayout(3,1));
         p1.add(p11);
         p1.add(p12);
         p1.add(p13);
@@ -491,21 +610,113 @@ public class IndianGold extends JFrame implements ActionListener, FocusListener
         p2.add(spane);
         p2.setBorder(BorderFactory.createEtchedBorder());
 
-        JPanel p31=new JPanel();
-        p31.add(abtButton);
-        p31.add(setButton);
+        rp320=new JPanel();
+        rp320.add(taxButton);
+        rp320.add(setButton);
+        rp320.add(rateBarButton);
+        rp320.add(abtButton);
+
+        rp321=new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
+        rp322=new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
+        labelTax1 = new JLabel("TAX-1 ", JLabel.RIGHT);
+//        labelTax1.setToolTipText("Click to edit tax name");
+//        labelTax1.addMouseListener(new MouseAdapter() {
+//            public void mouseClicked(MouseEvent me) {
+//                rp321.dispatchEvent(me);
+//            }
+//        });
+        labelTax1EditField = new JTextField(4);
+        fields[5]=labelTax1EditField;
+        numTax1Field = new NumberField(3, true);
+        fields[6]=numTax1Field;
+        numTax1Field.addFocusListener(fAdapter);
+        numTax1fix = new JLabel("0", JLabel.CENTER);
+        Font labelFont = labelTax1.getFont();
+        Font textFieldFont = labelTax1EditField.getFont();
+        labelTax1EditField.setFont(labelFont);
+        numTax1fix.setFont(textFieldFont);
+        labelTax2 = new JLabel("TAX-2 ", JLabel.RIGHT);
+        labelTax2EditField = new JTextField(4);
+        fields[7]=labelTax2EditField;
+        labelTax2EditField.setFont(labelFont);
+        numTax2Field = new NumberField(3, true);
+        fields[8]=numTax2Field;
+        numTax2Field.addFocusListener(fAdapter);
+        numTax2fix = new JLabel("0", JLabel.CENTER);
+        numTax2fix.setFont(textFieldFont);
+        labelTax3 = new JLabel("TAX-3 ", JLabel.RIGHT);
+        labelTax3EditField = new JTextField(4);
+        fields[9]=labelTax3EditField;
+        labelTax3EditField.setFont(labelFont);
+        numTax3Field = new NumberField(3, true);
+        fields[10]=numTax3Field;
+        numTax3Field.addFocusListener(fAdapter);
+        numTax3fix = new JLabel("0", JLabel.CENTER);
+        numTax3fix.setFont(textFieldFont);
+        cards = new CardLayout();
+        p32 = new JPanel(cards);
+        cAdapter = new CardAdapter();
+        rp321.add(labelTax1);
+        rp321.add(numTax1Field);
+        rp321.add(labelTax2);
+        rp321.add(numTax2Field);
+        rp321.add(labelTax3);
+        rp321.add(numTax3Field);
+        rp321.add(ok1);
+        // ###
+        rp322.add(labelTax1EditField);
+        rp322.add(numTax1fix);
+        rp322.add(labelTax2EditField);
+        rp322.add(numTax2fix);
+        rp322.add(labelTax3EditField);
+        rp322.add(numTax3fix);
+        rp322.add(ok2);
+        Component[] array1 = rp321.getComponents();
+        Component[] array2 = rp322.getComponents();
+        for(int i=0; i<7; i++) // As both the JPanels has 7 components: 3 labels, 3 textfields, 1 button
+        {
+            if(array1[i] instanceof JLabel)
+            {
+                ((JLabel)array1[i]).setToolTipText("Click to edit tax name");
+                array1[i].addMouseListener(cAdapter);
+            }
+            else if(array1[i] instanceof NumberField) ((NumberField)array1[i]).setToolTipText("Enter tax rate in percentage");
+            if(array2[i] instanceof JLabel)
+            {
+                ((JLabel)array2[i]).setToolTipText("Click to edit tax");
+                array2[i].addMouseListener(cAdapter);
+            }
+            else if(array2[i] instanceof JTextField) ((JTextField)array2[i]).setToolTipText("Enter tax name");
+        }
+        p32.add(rp320, "MAIN");
+        p32.add(rp321, "TRUE");
+        p32.add(rp322, "FALSE");
+
         JPanel p3=new JPanel();
-        p3.add(p31);
-        p3.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Settings"));
+        p3.setLayout(new BoxLayout(p3, BoxLayout.LINE_AXIS));
+        p3.add(p32);
+        p3.setBorder(BorderFactory.createEtchedBorder());
+//        p3.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Settings"));
 
         mainPane = new JPanel();
         mainPane.setLayout(new BorderLayout());
         mainPane.add(p1,BorderLayout.NORTH);
         mainPane.add(p2,BorderLayout.CENTER);
         mainPane.add(p3,BorderLayout.SOUTH);
-
+        for(JTextField component : fields) { // Apply standard height on all textfields
+            component.setPreferredSize(new Dimension(component.getPreferredSize().width, requiredTFheight));
+        }
         ratePane = new RateBar(fOps, (fOps.getValue("$calculator", "1").equals("1")?BorderFactory.createEtchedBorder():BorderFactory.createRaisedBevelBorder()));
 
+        init();
+        resetUIData();
+    }
+    
+    /**
+     * Created separate init to avoid overridable methods setLayout, add & setIconImage in the constructor
+     */
+    private void init()
+    {
         setLayout(new BorderLayout());
         add(mainPane, BorderLayout.CENTER);
         add(ratePane, BorderLayout.EAST);
@@ -520,10 +731,8 @@ public class IndianGold extends JFrame implements ActionListener, FocusListener
         {
             System.out.println("Icon not found.");
         }
-
-        resetUIData();
     }
-
+    
     /**
      * Internal method for controlling number of rows to display in the conversion table.
      * @param num Specifies the number of rows to display.
@@ -564,43 +773,73 @@ public class IndianGold extends JFrame implements ActionListener, FocusListener
         return new Dimension(X,Y);
     }
 
-
+    private class CardAdapter extends MouseAdapter
+    {    
+        @Override
+        public void mouseClicked(MouseEvent me) {
+            nowcard = !nowcard;
+            if(nowcard)
+            {
+                labelTax1.setText(labelTax1EditField.getText());
+                labelTax2.setText(labelTax2EditField.getText());
+                labelTax3.setText(labelTax3EditField.getText());
+                numTax1Field.setText(numTax1fix.getText());
+                numTax2Field.setText(numTax2fix.getText());
+                numTax3Field.setText(numTax3fix.getText());
+            }
+            else
+            {
+                labelTax1EditField.setText(labelTax1.getText());
+                labelTax2EditField.setText(labelTax2.getText());
+                labelTax3EditField.setText(labelTax3.getText());
+                numTax1fix.setText(numTax1Field.getText());
+                numTax2fix.setText(numTax2Field.getText());
+                numTax3fix.setText(numTax3Field.getText());
+            }
+            cards.show(p32, Boolean.toString(nowcard).toUpperCase());
+        }
+    }
+    
     private class ShowHideAdapter extends ClickCountAdapter
     {
-        boolean doubleClickForShowHide, doubleRightClickForRefresh;
-        //Timer timer;
-        int condition;
+        boolean doubleClickForShowHide, manualRefreshRates;
 
         public ShowHideAdapter() 
         {
-            condition=0;
             doubleClickForShowHide=fOps.getValue("$clickcondition", "1").equals("1");
-            // true = Single click for show/hide. Double click for settings.
-            // false = Double click for show/hide. Right click for settings.
-            doubleRightClickForRefresh=fOps.getValue("$rateauto", "0").equals("0");
-            // true = Double right click for fetch rates.
+            // true = Single click to fill the rate. Double click for show/hide calculator.
+            // false = Double click to fill the rate. Right click for show/hide calculator.
+            
+            manualRefreshRates=fOps.getValue("$rateauto", "0").equals("0");
+            // true = Manual refresh enabled.
         }
 
         @Override
         public void singleClick(MouseEvent e)
         {
             if(SwingUtilities.isRightMouseButton(e))
-            { // right single click required.
-                if(doubleClickForShowHide) condition=0; // right single click not required for doubleClickForShowHide
-                else
+            {
+                if(doubleClickForShowHide) // right single click for clickCondition=1, refresh the rate
                 {
-                    showMainPane(!fOps.getValue("$calculator", "0").equals("1"), true); //if showing then false else show
-                } // right single click to show/hide
+                    if(manualRefreshRates) ratePane.fetchRates();
+                }
+                else // right single click for clickCondition=2, show/hide calculator
+                {
+                    showMainPane(!fOps.getValue("$calculator", "0").equals("1"), true);
+                }
             }
             else
-            { // left single click required.
-                if(doubleClickForShowHide)
+            {
+                if(doubleClickForShowHide) // left single click for clickCondition=1, fill the rate
                 {
                     if(e.getSource() instanceof RateLabel) updateRate((RateLabel)e.getSource());
                     calculateWeights();
                     calculateCost();
-                } // left single click 
-                else condition=0; // left single click not required for doubleClickForShowHide=false
+                }
+                else // left single click for clickCondition=2, refresh the rate
+                {
+                    if(manualRefreshRates) ratePane.fetchRates();
+                }
             }
         }
 
@@ -609,21 +848,35 @@ public class IndianGold extends JFrame implements ActionListener, FocusListener
         {
             if(SwingUtilities.isRightMouseButton(e))
             {
-                if(doubleRightClickForRefresh) ratePane.fetchRates();
+                // Right double click has no functionality
             }
             else
-            { // left double click required.
-                if(doubleClickForShowHide)
+            {
+                if(doubleClickForShowHide) // left double click for clickCondition=1, show/hide calculator
                 {
-                    showMainPane(!fOps.getValue("$calculator", "0").equals("1"), true); //if showing then false else show
-                } // left double click for settings.
-                else
+                    showMainPane(!fOps.getValue("$calculator", "0").equals("1"), true);
+                }
+                else // left double click for clickCondition=2, fill the rate
                 {
                     if(e.getSource() instanceof RateLabel) updateRate((RateLabel)e.getSource());
                     calculateWeights();
                     calculateCost();
-                } // left double click for show/hide.
+                }
             }
+        }
+        
+        @Override
+        public void mouseEntered(MouseEvent e)
+        {
+            if(e.getSource() instanceof RateLabel)
+                ((RateLabel)e.getSource()).glow();
+        }
+        
+        @Override
+        public void mouseExited(MouseEvent e)
+        {
+            if(e.getSource() instanceof RateLabel)
+                ((RateLabel)e.getSource()).dim();
         }
     }
 

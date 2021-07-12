@@ -18,6 +18,7 @@ package com.sounaks.indiangold;
 
 import java.awt.*;
 import java.awt.event.MouseListener;
+import java.io.IOException;
 import java.text.*;
 import java.util.*;
 import java.util.logging.*;
@@ -36,13 +37,15 @@ public class RateBar extends JPanel
     JPanel centerP, rightP;
     JLabel top, bottom;
     RateLabel blocks[];
-    private Vector<String> metals;
-    private Vector<String> rates;
+    private final Vector<String> metals;
+    private final Vector<String> rates;
     static final String PRECIOUS_METALS_STRING = "goldsilverplatinumpalladiumrhodium";
     static final String BASE_METALS_STRING = "coppernickelaluminumzincleaduranium";
     private String preciousUnit, baseUnit;
-    private final String timePattern1="'As on' EEE, d MMM";
-    private final String timePattern2="yyyy HH:mm z";
+//    private final String timePattern1="'As on' EEE, d MMM";
+//    private final String timePattern2="yyyy HH:mm z";
+    private final String timePattern1="'Kitco.com'";
+    private final String timePattern2="d-MMM-yy HH:mm";
     SimpleDateFormat sdf;
     java.util.Timer timer;
     TimerTask tt;
@@ -56,13 +59,13 @@ public class RateBar extends JPanel
     
     RateBar(FileOperations fileOps, Border borderType)
     {
+        super.setLayout(new BorderLayout());
         this.fileOps=fileOps;
         this.borderType=borderType;
         metals = new Vector<String>();
         rates = new Vector<String>();
         centerP=new JPanel(new GridLayout(12,1));
         rightP=new JPanel(new GridLayout(2,1));
-        setLayout(new BorderLayout());
         cal = Calendar.getInstance();
         sdf = new SimpleDateFormat(timePattern1);
         String tmpDate=sdf.format(cal.getTime());
@@ -81,21 +84,23 @@ public class RateBar extends JPanel
         
         blocks[0]=new RateLabel(tmpDate, tmpTime);
         centerP.add(blocks[0]);
-
+        Font thisFont = blocks[0].getFont();
+        int labelWidth = blocks[0].getFontMetrics(thisFont).stringWidth(tmpTime) + 10;
+        int labelHeight = blocks[0].getPreferredSize().height + 4;
+        Dimension labelDim = new Dimension(labelWidth, labelHeight);
         for(int i=0; i<metals.size(); i++)
         {
             blocks[i+1]=new RateLabel(metals.elementAt(i), rates.elementAt(i));
+            blocks[i+1].setPreferredSize(labelDim);
             centerP.add(blocks[i+1]);
         }
         
         preciousUnit="USD/oz (troy ounce)";
         baseUnit="USD/lb";
-        //top=new JLabel(verticalize(preciousUnit));
         top=new JLabel();
         top.setForeground(Color.red);
         top.setHorizontalAlignment(SwingConstants.CENTER);
         top.setBorder(borderType);
-        //bottom=new JLabel(verticalize(baseUnit));
         bottom=new JLabel();
         bottom.setForeground(Color.blue);
         bottom.setHorizontalAlignment(SwingConstants.CENTER);
@@ -103,12 +108,16 @@ public class RateBar extends JPanel
         rightP.add(top);
         rightP.add(bottom);
         
-        add(centerP, BorderLayout.CENTER);
-        add(rightP, BorderLayout.EAST);
-        
+        init();
         setSchedule(Integer.valueOf(fileOps.getValue("$rateauto", "0")));
     }
     
+    private void init()
+    {
+        this.add(Box.createVerticalStrut(4), BorderLayout.NORTH);
+        this.add(centerP, BorderLayout.CENTER);
+        this.add(rightP, BorderLayout.EAST);
+    }
     /**
      * Sets the frequency in minutes at which the software fetches market rates for the metals.
      * @param minutes The frequency in minutes after which the software fetches market rates for the metals.
@@ -202,7 +211,7 @@ public class RateBar extends JPanel
     private HashMap<String, String> getRatesFromKitcoDotCom()
     {
         HashMap<String, String> hm = new HashMap<>();
-        String tmpKey="", tmpVal="";
+        String tmpKey, tmpVal;
         boolean errorOccured=false;
         try
         {
@@ -229,13 +238,18 @@ public class RateBar extends JPanel
                 System.out.println("received error code : " + statusCode);
             }
         }
-        catch (Exception ex)
+        catch (java.net.UnknownHostException | java.net.SocketTimeoutException ex)
         {
             errorOccured=true;
-            System.out.println("Exception caught!");
+            System.out.println("Website not reachable: " + ex.getMessage());
+        }
+        catch (IOException ex)
+        {
+            errorOccured=true;
+            System.out.println("Exception caught: " + ex.getMessage());
             Logger.getLogger(RateBar.class.getName()).log(Level.SEVERE, null, ex);
         }
-        if(errorOccured) return new HashMap<String, String>();
+        if(errorOccured) return new HashMap<>();
         else return hm;
     }
     
@@ -297,13 +311,18 @@ public class RateBar extends JPanel
                 System.out.println("received error code : " + statusCode);
             }
         }
-        catch (Exception ex)
+        catch (java.net.UnknownHostException | java.net.SocketTimeoutException ex)
         {
             errorOccured=true;
-            System.out.println("Exception caught!");
+            System.out.println("Website not reachable: " + ex.getMessage());
+        }
+        catch (IOException ex)
+        {
+            errorOccured=true;
+            System.out.println("Exception caught: " + ex.getMessage());
             Logger.getLogger(RateBar.class.getName()).log(Level.SEVERE, null, ex);
         }
-        if(errorOccured) return new HashMap<String, String>();
+        if(errorOccured) return new HashMap<>();
         else return hm;
     }
 
@@ -335,9 +354,14 @@ public class RateBar extends JPanel
                 return false;
             }
         }
-        catch (Exception ex)
+        catch (java.net.UnknownHostException | java.net.SocketTimeoutException ex)
         {
-            System.out.println("Exception caught!");
+            System.out.println("Website not reachable: " + ex.getMessage());
+            return false;
+        }
+        catch (IOException | NullPointerException ex)
+        {
+            System.out.println("Exception caught: " + ex.getMessage());
             Logger.getLogger(RateBar.class.getName()).log(Level.SEVERE, null, ex);
             return false;
         }
@@ -439,7 +463,7 @@ public class RateBar extends JPanel
         }
         HashMap<String, String> preciousMap = getRatesFromKitcoDotCom();
         HashMap<String, String> baseMap = getRatesFromKitcometalsDotCom();
-        System.out.println(preciousMap);
+//        System.out.println(preciousMap);
         saveMetalAndRates(preciousMap, baseMap);
         
         updateMetalRates(usdConvFactorSaved ? Double.valueOf(fileOps.getValue("$convfactor", "1D")) : 1D);
@@ -549,9 +573,19 @@ public class RateBar extends JPanel
         for(int i=1; i<blocks.length; i++)
         {
             if(fileOps.getValue("$clickcondition", "1").equals("1"))
-                blocks[i].setToolTipText("<html>Single click to use this rate and<br>Double click to show/hide calculator</html>");
+            {
+                if(fileOps.getValue("$rateauto", "0").equals("0")) //if manual refresh
+                    blocks[i].setToolTipText("<html>Single click to use this rate<br>Double click to show/hide calculator<br>and Right click to refresh rates</html>");
+                else //if auto refresh
+                    blocks[i].setToolTipText("<html>Single click to use this rate and<br>Double click to show/hide calculator</html>");
+            }
             else
-                blocks[i].setToolTipText("<html>Double click to use this rate and<br>Right click to show/hide calculator</html>");
+            {
+                if(fileOps.getValue("$rateauto", "0").equals("0")) //if manual refresh
+                    blocks[i].setToolTipText("<html>Double click to use this rate<br>Right click to show/hide calculator<br>and Single click to refresh</html>");
+                else //if auto refresh
+                    blocks[i].setToolTipText("<html>Double click to use this rate and<br>Right click to show/hide calculator</html>");
+            }
         }
     }
     
@@ -589,25 +623,44 @@ public class RateBar extends JPanel
     {
         String name;
         String rate;
-        final String nameColor1 = "<font color=red>";
-        final String nameColor2 = "<font color=blue>";
-        final String nameColor3 = "<font color=gray>";
+        final String preciousMetalsDeep = "<font color=red>";
+        final String preciousMetalsLight = "<font color=yellow>";
+        final String baseMetalsDeep = "<font color=blue>";
+        final String baseMetalsLight = "<font color=aqua>";
+        final String noneMetalColor = "<font color=gray>";
         final String rateColor = "<font color=black>";
         
         RateLabel(String name, String rate)
         {
+            super.setHorizontalAlignment(SwingConstants.CENTER);
+            super.setText("<html><center>"+(PRECIOUS_METALS_STRING.contains(name)?preciousMetalsDeep:(BASE_METALS_STRING.contains(name)?baseMetalsDeep:rateColor))+name.substring(0, 1).toUpperCase()+name.substring(1) +"</font><p>"+((PRECIOUS_METALS_STRING.contains(name)||BASE_METALS_STRING.contains(name))?rateColor:noneMetalColor)+rate+"</font></center></html>");
+            super.setBorder(borderType);
             this.name = name;
             this.rate = rate;
-            setHorizontalAlignment(SwingConstants.CENTER);
-            setText("<html><center>"+(PRECIOUS_METALS_STRING.contains(name)?nameColor1:(BASE_METALS_STRING.contains(name)?nameColor2:rateColor))+name.substring(0, 1).toUpperCase()+name.substring(1) +"</font><p>"+((PRECIOUS_METALS_STRING.contains(name)||BASE_METALS_STRING.contains(name))?rateColor:nameColor3)+rate+"</font></center></html>");
-            setBorder(borderType);
         }
         
         void setText(String name, String rate)
         {
             this.name = name;
             this.rate = rate;
-            setText("<html><center>"+(PRECIOUS_METALS_STRING.contains(name)?nameColor1:(BASE_METALS_STRING.contains(name)?nameColor2:rateColor))+name.substring(0, 1).toUpperCase()+name.substring(1) +"</font><p>"+((PRECIOUS_METALS_STRING.contains(name)||BASE_METALS_STRING.contains(name))?rateColor:nameColor3)+rate+"</font></center></html>");
+            setText("<html><center>"+(PRECIOUS_METALS_STRING.contains(name)?preciousMetalsDeep:(BASE_METALS_STRING.contains(name)?baseMetalsDeep:rateColor))+name.substring(0, 1).toUpperCase()+name.substring(1) +"</font><p>"+((PRECIOUS_METALS_STRING.contains(name)||BASE_METALS_STRING.contains(name))?rateColor:noneMetalColor)+rate+"</font></center></html>");
+        }
+        
+        void setLightText(String name, String rate)
+        {
+            this.name = name;
+            this.rate = rate;
+            setText("<html><center>"+(PRECIOUS_METALS_STRING.contains(name)?preciousMetalsLight:(BASE_METALS_STRING.contains(name)?baseMetalsLight:rateColor))+name.substring(0, 1).toUpperCase()+name.substring(1) +"</font><p>"+((PRECIOUS_METALS_STRING.contains(name)||BASE_METALS_STRING.contains(name))?rateColor:noneMetalColor)+rate+"</font></center></html>");
+        }
+        
+        public void glow()
+        {
+            setLightText(name, rate);
+        }
+        
+        public void dim()
+        {
+            setText(name, rate);
         }
         
         public String getRate()

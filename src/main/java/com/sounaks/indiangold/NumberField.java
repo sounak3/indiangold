@@ -24,17 +24,67 @@ package com.sounaks.indiangold;
  * @author Sounak Choudhury
  */
 import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
+import java.awt.event.KeyAdapter;
 import javax.swing.JTextField;
 
-public class NumberField extends JTextField implements KeyListener
+public class NumberField extends JTextField
 {
     boolean percentAllowed;
     public NumberField(int width, boolean percentAllowed)
     {
         super(width);
         super.setHorizontalAlignment(RIGHT );
-        super.addKeyListener(this);
+        super.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyTyped(KeyEvent e)
+            {
+                char c = e.getKeyChar();				
+                String ss= getText();
+                if((c == '.') && (ss.length()== 0))
+                {
+                    setText("0");
+                }
+                else if((c == '.') && (ss.length() > 0))
+                {
+                    if(ss.contains(".") || (ss.contains("%") && percentAllowed))
+                    {
+                        getToolkit().beep();
+                        e.consume();
+                    }
+                }
+                else if((c == '%') && percentAllowed && (ss.length() > 0))
+                {
+                    if(ss.contains("%"))
+                    {
+                        getToolkit().beep();
+                        e.consume();
+                    }
+                }
+                else if (!((c >= '0') && (c <= '9') 
+                        || (c == KeyEvent.VK_BACK_SPACE) 
+                        || (c == KeyEvent.VK_DELETE) 
+                        || (c == KeyEvent.VK_ENTER))
+                        || ss.endsWith("%"))
+                {
+                    getToolkit().beep();
+                    e.consume();
+                }
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {}
+
+            @Override
+            public void keyReleased(KeyEvent e)
+            {
+                char c = e.getKeyChar();
+                if((c == KeyEvent.VK_TAB) || (c == KeyEvent.VK_ENTER))
+                {
+                    if(getText().startsWith(".")) setText("0"+getText());
+                }
+            }
+            
+        });
         this.percentAllowed = percentAllowed;
     }
 
@@ -64,54 +114,5 @@ public class NumberField extends JTextField implements KeyListener
     public boolean hasPercentSign()
     {
         return this.getText().contains("%");
-    }
-    
-    @Override
-    public void keyTyped(KeyEvent e)
-    {
-        char c = e.getKeyChar();				
-        String ss= getText();
-        if((c == '.') && (ss.length()== 0))
-        {
-            setText("0");
-        }
-        else if((c == '.') && (ss.length() > 0))
-        {
-            if(ss.contains(".") || (ss.contains("%") && percentAllowed))
-            {
-                getToolkit().beep();
-                e.consume();
-            }
-        }
-        else if((c == '%') && percentAllowed && (ss.length() > 0))
-        {
-            if(ss.contains("%"))
-            {
-                getToolkit().beep();
-                e.consume();
-            }
-        }
-        else if (!((c >= '0') && (c <= '9') 
-                || (c == KeyEvent.VK_BACK_SPACE) 
-                || (c == KeyEvent.VK_DELETE) 
-                || (c == KeyEvent.VK_ENTER))
-                || ss.endsWith("%"))
-        {
-            getToolkit().beep();
-            e.consume();
-        }
-    }
-
-    @Override
-    public void keyPressed(KeyEvent e) {}
-
-    @Override
-    public void keyReleased(KeyEvent e)
-    {
-        char c = e.getKeyChar();
-        if((c == KeyEvent.VK_TAB) || (c == KeyEvent.VK_ENTER))
-        {
-            if(getText().startsWith(".")) setText("0"+getText());
-        }
     }
 }

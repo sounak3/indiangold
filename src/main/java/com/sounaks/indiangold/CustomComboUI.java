@@ -58,7 +58,7 @@ public class CustomComboUI extends BasicComboBoxUI
     {
         public ArrowButtonImpl()
         {
-            BasicArrowButton bab=new BasicArrowButton(SwingConstants.SOUTH, getBackground(), Color.GRAY, Color.DARK_GRAY, Color.LIGHT_GRAY);
+            BasicArrowButton bab=new BasicArrowButton(SwingConstants.SOUTH, super.getBackground(), Color.GRAY, Color.DARK_GRAY, Color.LIGHT_GRAY);
             int width=bab.getPreferredSize().width;
             int height=bab.getPreferredSize().height;
             //System.out.println("Width="+width+", Height="+height);
@@ -66,7 +66,7 @@ public class CustomComboUI extends BasicComboBoxUI
             int size = Math.min((height - 4)/3, (width - 4)/3);
             size = Math.max(size, 2);
             bab.paintTriangle(image.getGraphics(), (width-size)/2, (height-size)/2, size, SwingConstants.SOUTH, true);
-            setIcon(new ImageIcon(image.getScaledInstance(16, 16, Image.SCALE_AREA_AVERAGING)));
+            super.setIcon(new ImageIcon(image.getScaledInstance(16, 16, Image.SCALE_AREA_AVERAGING)));
         }
 
         /*@Override

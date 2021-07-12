@@ -27,10 +27,16 @@ public class CheckboxListRenderer extends JCheckBox implements ListCellRenderer
 {
 	public CheckboxListRenderer()
 	{
-		setBackground(UIManager.getColor("List.textBackground"));
-		setForeground(UIManager.getColor("List.textForeground"));
+            init();
 	}
 	
+        private void init()
+        {
+            setBackground(UIManager.getColor("List.textBackground"));
+            setForeground(UIManager.getColor("List.textForeground"));
+        }
+        
+        @Override
 	public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean hasFocus)
 	{
 		setEnabled(list.isEnabled());

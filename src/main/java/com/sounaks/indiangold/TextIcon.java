@@ -101,11 +101,15 @@ public class TextIcon implements Icon, PropertyChangeListener
 	{
 		this.component = component;
 		this.layout = layout;
-		setText( text );
-
-		component.addPropertyChangeListener("font", this);
+                init(text);
 	}
 
+        private void init(String text)
+        {
+		setText( text );
+		component.addPropertyChangeListener("font", this);
+        }
+        
 	/**
 	 *  Get the Layout enum
 	 *
@@ -220,8 +224,8 @@ public class TextIcon implements Icon, PropertyChangeListener
 	 */
 	private void calculateIconDimensions()
 	{
-		Font font = getFont();
-		FontMetrics fm = component.getFontMetrics( font );
+		Font curFont = getFont();
+		FontMetrics fm = component.getFontMetrics( curFont );
 
 		if (layout == Layout.HORIZONTAL)
 		{

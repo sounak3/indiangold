@@ -168,35 +168,36 @@ public class RotatedIcon implements Icon
 		int xAdjustment = (icon.getIconWidth() % 2) == 0 ? 0 : -1;
 		int yAdjustment = (icon.getIconHeight() % 2) == 0 ? 0 : -1;
 
-    	if (rotate == Rotate.DOWN)
-    	{
-			g2.translate(x + cHeight, y + cWidth);
-			g2.rotate( Math.toRadians( 90 ) );
-			icon.paintIcon(c, g2,  -cWidth, yAdjustment - cHeight);
-    	}
-    	else if (rotate == Rotate.UP)
-    	{
-			g2.translate(x + cHeight, y + cWidth);
-			g2.rotate( Math.toRadians( -90 ) );
-			icon.paintIcon(c, g2,  xAdjustment - cWidth, -cHeight);
-    	}
-    	else if (rotate == Rotate.UPSIDE_DOWN)
-    	{
-			g2.translate(x + cWidth, y + cHeight);
-			g2.rotate( Math.toRadians( 180 ) );
-			icon.paintIcon(c, g2, xAdjustment - cWidth, yAdjustment - cHeight);
-    	}
-    	else if (rotate == Rotate.ABOUT_CENTER)
-    	{
-			Rectangle r = new Rectangle(x, y, icon.getIconWidth(), icon.getIconHeight());
-			g2.setClip(r);
-			AffineTransform original = g2.getTransform();
-			AffineTransform at = new AffineTransform();
-			at.concatenate(original);
-			at.rotate(Math.toRadians(angle), x + cWidth, y + cHeight);
-			g2.setTransform(at);
-			icon.paintIcon(c, g2, x, y);
-			g2.setTransform(original);
-    	}
+    	if (null != rotate)
+    	    switch (rotate) {
+                case DOWN:
+                    g2.translate(x + cHeight, y + cWidth);
+                    g2.rotate( Math.toRadians( 90 ) );
+                    icon.paintIcon(c, g2,  -cWidth, yAdjustment - cHeight);
+                    break;
+                case UP:
+                    g2.translate(x + cHeight, y + cWidth);
+                    g2.rotate( Math.toRadians( -90 ) );
+                    icon.paintIcon(c, g2,  xAdjustment - cWidth, -cHeight);
+                    break;
+                case UPSIDE_DOWN:
+                    g2.translate(x + cWidth, y + cHeight);
+                    g2.rotate( Math.toRadians( 180 ) );
+                    icon.paintIcon(c, g2, xAdjustment - cWidth, yAdjustment - cHeight);
+                    break;
+                case ABOUT_CENTER:
+                    Rectangle r = new Rectangle(x, y, icon.getIconWidth(), icon.getIconHeight());
+                    g2.setClip(r);
+                    AffineTransform original = g2.getTransform();
+                    AffineTransform at = new AffineTransform();
+                    at.concatenate(original);
+                    at.rotate(Math.toRadians(angle), x + cWidth, y + cHeight);
+                    g2.setTransform(at);
+                    icon.paintIcon(c, g2, x, y);
+                    g2.setTransform(original);
+                    break;
+                default:
+                    break;
+            }
     }
 }

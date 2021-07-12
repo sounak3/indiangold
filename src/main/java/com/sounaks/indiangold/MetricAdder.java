@@ -29,19 +29,24 @@ import javax.swing.*;
  *
  * @author Sounak Choudhury
  */
-class MetricAdder extends JDialog implements ActionListener
+class MetricAdder extends JDialog
 {
 	public static final long serialVersionUID = 4L;
-	private JLabel l1, l2, l3, l4, l5;
-	private JButton addOp, cancelOp;	
-	private NumberField n1, n2;
-	private JTextField t1;
-	private JComboBox j1;
-	private String []newMetric;
+	private final JLabel l1, l2, l3, l4, l5;
+	private final JButton addOp, cancelOp;	
+	private final NumberField n1, n2;
+	private final JTextField t1;
+	private final JComboBox j1;
+	private final String []newMetric;
+        private final MetricActionAdapter mAdapter;
+        private final JDialog thisdialog;
 		
 	MetricAdder(JDialog frame, Vector <String>listContents, String val) // enters edit mode if val = null
 	{
 		super(frame,"Enter Details...");
+                thisdialog = this;
+		JPanel pane=(JPanel)super.getContentPane();
+                mAdapter = new MetricActionAdapter();
 		Vector<String> contents = new Vector<String>(listContents.size());
 		for(int i=0; i<listContents.size(); i++)
 		{
@@ -57,7 +62,7 @@ class MetricAdder extends JDialog implements ActionListener
 		n2=new NumberField(10, false);
 		j1=new JComboBox(contents);
 		j1.setPreferredSize(t1.getPreferredSize());
-		if(!(val == null || val.equals(null) || val.equals("")) && contents.contains(val))
+		if(!(val == null || val.equals("")) && contents.contains(val))
 		{
 			j1.setSelectedItem(val);
 			t1.setText(val);
@@ -87,22 +92,25 @@ class MetricAdder extends JDialog implements ActionListener
 		flowPane.add(p2);
 
 		addOp=new JButton("Add");
-		addOp.addActionListener(this);
+		addOp.addActionListener(mAdapter);
 		cancelOp=new JButton("Cancel");
-		cancelOp.addActionListener(this);
+		cancelOp.addActionListener(mAdapter);
 		JPanel p4=new JPanel();
 		p4.add(addOp);
 		p4.add(cancelOp);
 
-		JPanel pane=(JPanel)getContentPane();
 		pane.add(flowPane,BorderLayout.CENTER);
 		pane.add(p4,BorderLayout.SOUTH);
-		pack();
-		setModal(true);
-		setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-
+                init();
 		newMetric=new String[4];
 	}
+        
+        private void init()
+        {
+            pack();
+            setModal(true);
+            setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        }
 	
 	public static String[] getNewMetric(JDialog parent, Vector <String>contents, String val)
 	{
@@ -116,20 +124,21 @@ class MetricAdder extends JDialog implements ActionListener
 
 	private boolean isZero(String txt)
 	{
-		Double dbl = 0.00;
-		try
-		{
-			dbl = Double.parseDouble(txt);
-		}
-		catch(NumberFormatException ne)
-		{
-			return true;
-		}
-		if(dbl==0) return true;
-		else return false;
+            Double dbl;
+            try
+            {
+                    dbl = Double.parseDouble(txt);
+            }
+            catch(NumberFormatException ne)
+            {
+                    return true;
+            }
+            return dbl==0;
 	}
-		
-    @Override
+
+    private class MetricActionAdapter implements ActionListener
+    {
+        @Override
 	public void actionPerformed(ActionEvent ae)
 	{
 		Object src=ae.getSource();
@@ -140,14 +149,14 @@ class MetricAdder extends JDialog implements ActionListener
 			String VALUE2=n2.getText();
 			if(NAME.length()==0 || VALUE1.length()==0 || VALUE2.length()==0)
 			{
-				JOptionPane.showMessageDialog(this,"Please fill in the unit details and value fields.","Input Error",JOptionPane.INFORMATION_MESSAGE);
+				JOptionPane.showMessageDialog(thisdialog,"Please fill in the unit details and value fields.","Input Error",JOptionPane.INFORMATION_MESSAGE);
 				if(VALUE1.length()==0) n1.requestFocus();
 				else if(NAME.length()==0) t1.requestFocus();
 				else if(VALUE2.length()==0) n2.requestFocus();
 			}
 			else if(isZero(VALUE1) || isZero(VALUE2))
 			{
-				JOptionPane.showMessageDialog(this,"Values cannot be \'0\' or left blank.","Input Error",JOptionPane.INFORMATION_MESSAGE);
+				JOptionPane.showMessageDialog(thisdialog,"Values cannot be \'0\' or left blank.","Input Error",JOptionPane.INFORMATION_MESSAGE);
 				if(isZero(VALUE1)) n1.requestFocus();
 				else if(isZero(VALUE2)) n2.requestFocus();
 			}
@@ -165,7 +174,8 @@ class MetricAdder extends JDialog implements ActionListener
 			dispose();
 		}
 	}
-	
+    }
+    
 	/*public static void main(String args[]) //for class standalone testing
 	{
 		FileOperations flop=new FileOperations(new File("Command.props"),"Co_propo");

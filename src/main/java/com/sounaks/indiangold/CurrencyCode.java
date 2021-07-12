@@ -52,17 +52,15 @@ public class CurrencyCode
 
 	public String largestString()
 	{
-		int len=0;
-		String lstr="";
-		for(int i=0; i<names.length; i++)
-		{
-			if(names[i].length()>len)
-			{
-				len = names[i].length();
-				lstr = names[i];
-			}
-		}
-		return lstr;
+            int len=0;
+            String lstr="";
+            for (String name1 : names) {
+                if (name1.length() > len) {
+                    len = name1.length();
+                    lstr = name1;
+                }
+            }
+            return lstr;
 	}
 	
 	public void setCode(String code)

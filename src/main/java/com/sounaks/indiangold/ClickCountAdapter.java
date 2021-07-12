@@ -26,14 +26,14 @@ import javax.swing.Timer;
  */
 public abstract class ClickCountAdapter extends MouseAdapter implements ActionListener
 {
-    private final static int clickInterval = (Integer)Toolkit.getDefaultToolkit().getDesktopProperty("awt.multiClickInterval");
+    private final static int CLICKINTERVAL = (Integer)Toolkit.getDefaultToolkit().getDesktopProperty("awt.multiClickInterval");
 
     MouseEvent lastEvent;
     Timer timer;
 
     public ClickCountAdapter()
     {
-        this(clickInterval);
+        this(CLICKINTERVAL);
     }
 
     public ClickCountAdapter(int delay)
