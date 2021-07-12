@@ -59,16 +59,19 @@ public class IndianGold extends JFrame
     DefaultTableModel model;
     JButton abtButton, setButton, taxButton, rateBarButton, ok1, ok2;
     JScrollPane spane;
-    private final JPanel mainPane, p12, p32, rp320, rp321, rp322;
     RateBar ratePane;
     Currency currency;
     ShowHideAdapter shAdapter;
     CardAdapter cAdapter;
     NumberFieldFocusAdapter fAdapter;
     PrivateActionAdapter aAdapter;
+    private final JPanel mainPane, p12, p32, rp320, rp321, rp322;
     private final CardLayout cards;
     boolean nowcard = true;
     boolean taxBoxActivated = false;
+    public static final String NAME_STRING_FULL = "Indian Gold v4.0";
+    public static  final String NAME_STRING_MEDIUM = "IndianGold4.0";
+    public static  final String NAME_STRING_SHORT = "IGv4";
 
     /**
      * Internal method to make the sentence to be displayed in the price panel.
@@ -296,8 +299,8 @@ public class IndianGold extends JFrame
         mainPane.setVisible(show);
         ratePane.setBorder(fOps.getValue("$calculator", "1").equals("1")?BorderFactory.createEtchedBorder():BorderFactory.createRaisedBevelBorder());
         pack();
-        if(show) setTitle("Indian Gold v4.0");
-        else setTitle("IGv4");
+        if(show) setTitle(NAME_STRING_FULL);
+        else setTitle(NAME_STRING_SHORT);
         if(invokedByRateBar)
         {
             rect=getBounds();
@@ -475,8 +478,8 @@ public class IndianGold extends JFrame
      */
     public IndianGold()
     {
-        super("Indian Gold v4.0");
-        fOps=new FileOperations(new File("units.dat"),"IndianGold4.0");
+        super(NAME_STRING_FULL);
+        fOps=new FileOperations(new File("units.dat"),NAME_STRING_MEDIUM);
         weightList=new Vector<String>(); //fOps.getCheckedUnitNames();
         mgValue=new Vector<String>(); //fOps.getCheckedUnitValues();
         shAdapter=new ShowHideAdapter();
@@ -619,12 +622,6 @@ public class IndianGold extends JFrame
         rp321=new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
         rp322=new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
         labelTax1 = new JLabel("TAX-1 ", JLabel.RIGHT);
-//        labelTax1.setToolTipText("Click to edit tax name");
-//        labelTax1.addMouseListener(new MouseAdapter() {
-//            public void mouseClicked(MouseEvent me) {
-//                rp321.dispatchEvent(me);
-//            }
-//        });
         labelTax1EditField = new JTextField(4);
         fields[5]=labelTax1EditField;
         numTax1Field = new NumberField(3, true);
