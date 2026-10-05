@@ -29,8 +29,10 @@ import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.text.DecimalFormat;
 import java.util.Currency;
+import java.util.Properties;
 import java.util.Vector;
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -69,9 +71,29 @@ public class IndianGold extends JFrame
     private final CardLayout cards;
     boolean nowcard = true;
     boolean taxBoxActivated = false;
-    public static final String NAME_STRING_FULL = "Indian Gold v5.0";
-    public static  final String NAME_STRING_MEDIUM = "IndianGold5.0";
-    public static  final String NAME_STRING_SHORT = "IGv5";
+    public static final String VERSION = readVersion();
+    public static final String NAME_STRING_FULL = "Indian Gold v" + VERSION;
+    public static  final String NAME_STRING_MEDIUM = "IndianGold" + VERSION;
+    public static  final String NAME_STRING_SHORT = "IGv" + VERSION.split("\\.")[0];
+
+    /**
+     * Reads the version Maven wrote into indiangold-version.properties, so pom.xml stays the only place it is set.
+     * @return The pom version without -SNAPSHOT, or "dev" when the resource was not filtered by Maven.
+     */
+    static String readVersion()
+    {
+        Properties versionProps = new Properties();
+        try (InputStream in = IndianGold.class.getResourceAsStream("/indiangold-version.properties"))
+        {
+            if(in != null) versionProps.load(in);
+        }
+        catch(IOException e)
+        {
+            System.out.println("Cannot read version: " + e);
+        }
+        String version = versionProps.getProperty("version", "").replace("-SNAPSHOT", "");
+        return version.isEmpty() || version.startsWith("${") ? "dev" : version;
+    }
 
     /**
      * Internal method to make the sentence to be displayed in the price panel.

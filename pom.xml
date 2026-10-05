@@ -29,6 +29,23 @@
 
     <build>
         <finalName>${project.artifactId}</finalName>
+        <resources>
+            <!-- Only the version file is filtered; units.dat must be copied byte for byte. -->
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>indiangold-version.properties</exclude>
+                </excludes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>indiangold-version.properties</include>
+                </includes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
