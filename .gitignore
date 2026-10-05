@@ -1,0 +1,19 @@
+# Maven build output
+/target/
+/dependency-reduced-pom.xml
+
+# Dev pipeline copy of the jar
+/indiangold_latest.jar
+
+# IDE and editor state
+/.vscode/
+/bin/
+/nbproject/
+/.project
+/.classpath
+/.settings/
+
+# Local Claude Code / tooling state
+/.claude/
+/.github/modernize/
+/MODERNIZE_INDIANGOLD.md
