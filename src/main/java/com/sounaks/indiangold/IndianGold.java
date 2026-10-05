@@ -69,9 +69,9 @@ public class IndianGold extends JFrame
     private final CardLayout cards;
     boolean nowcard = true;
     boolean taxBoxActivated = false;
-    public static final String NAME_STRING_FULL = "Indian Gold v4.0";
-    public static  final String NAME_STRING_MEDIUM = "IndianGold4.0";
-    public static  final String NAME_STRING_SHORT = "IGv4";
+    public static final String NAME_STRING_FULL = "Indian Gold v5.0";
+    public static  final String NAME_STRING_MEDIUM = "IndianGold5.0";
+    public static  final String NAME_STRING_SHORT = "IGv5";
 
     /**
      * Internal method to make the sentence to be displayed in the price panel.
