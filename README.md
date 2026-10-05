@@ -27,15 +27,17 @@ END USER LICENSE AGREEMENT (DISCLAIMER)
 _____________________________________________________
 REQUIREMENTS
 
-ANY OS. AS JAVA IS PLATFORM INDEPENDENT ;)
-JAVA SE / JRE 1.8 OR MORE REQUIRED.
+The installers (Windows .msi, Linux .deb and macOS .dmg) bundle their own Java runtime, so nothing else is needed.
+To run the plain jar file, Java 21 or newer is required.
+
+Settings, units and the last fetched rates are saved per user in the folder .indiangold in your home folder
+(%USERPROFILE%\.indiangold on Windows). A units.dat saved next to the jar by older versions is picked up automatically.
 
 _____________________________________________________
-ADDING PROJECT TO NETBEANS IDE
+BUILDING FROM SOURCE
 
-1. Download the contents of the repo as a zip file, preferably where you have read, write and execute permission.
-2. Open Betbeans IDE. Select the menu item File -> Import project -> From Zip
-3. Browse to the downloaded zip file of the project -> IMPORT.
-4. Build the project. And Run the project to use the software.
-5. To run manually goto Netbeans projects dir -> IndianGold -> target and execute the IndianGold*.jar file
-5. You can also use ommand line to run the Jar after build. For that goto cmd.exe and navigate to the above path and run: java -jar IndianGold.jar.
+1. Install JDK 21 and Maven, and clone this repository (or open it in NetBeans with File -> Open Project).
+2. Build with: mvn package
+3. Run with: java -jar target/indiangold.jar
+
+How the installers are built and released with Jenkins is described in BUILD.md.
