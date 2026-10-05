@@ -161,7 +161,7 @@ public class IndianGold extends JFrame
                 }
             }
         }
-        return new Double(0);
+        return 0;
     }
 	
     /**
@@ -250,7 +250,7 @@ public class IndianGold extends JFrame
         double total = price + makingCharge - discount + gst;
         String totalStr = formatter.format(total);
 
-        if(new Double(pricePerMiligram * noOfMiligrams).equals(Double.NaN))
+        if(Double.isNaN(pricePerMiligram * noOfMiligrams))
             costArea.setText(getCostString());
         else
             costArea.setText(getCostString(priceStr, makingChargeStr, discountStr, strGstPercent, gstStr, totalStr));
@@ -905,12 +905,14 @@ public class IndianGold extends JFrame
      */
     public static void main(String args[])
     {
-        IndianGold mm=new IndianGold();
-        mm.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        mm.pack();
-        Dimension loc=getScreenCenterLocation(mm);
-        mm.setLocation(loc.width,loc.height);
-        mm.setResizable(false);
-        mm.setVisible(true);
+        SwingUtilities.invokeLater(() -> {
+            IndianGold mm=new IndianGold();
+            mm.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            mm.pack();
+            Dimension loc=getScreenCenterLocation(mm);
+            mm.setLocation(loc.width,loc.height);
+            mm.setResizable(false);
+            mm.setVisible(true);
+        });
     }
 }

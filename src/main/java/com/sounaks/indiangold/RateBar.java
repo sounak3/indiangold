@@ -517,7 +517,7 @@ public class RateBar extends JPanel
         double costPerMiligram = usdCostPerOztOrLb/(1/(pMetal?this.ONE_MG_TO_TROY_OUNCE:this.ONE_MG_TO_POUND));
         double noOfMiligrams = unitspercurrency/ unitmgvalue;
 //        System.out.println(usdCostPerOzOrLb + String.format(", %.10f", costPerMiligram));
-        if(new Double(costPerMiligram * noOfMiligrams).equals(Double.NaN))
+        if(Double.isNaN(costPerMiligram * noOfMiligrams))
             return 0.0D;
         else
             return costPerMiligram * noOfMiligrams * usdconvfactor;
