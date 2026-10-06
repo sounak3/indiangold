@@ -443,6 +443,19 @@ public class RateBar extends JPanel
         }
     }
     
+    private static HashMap<String, String> withoutFailure(java.util.function.Supplier<HashMap<String, String>> fetch)
+    {
+        try
+        {
+            return fetch.get();
+        }
+        catch(RuntimeException e)
+        {
+            System.out.println("Cannot read rates from the web page: " + e);
+            return new HashMap<>();
+        }
+    }
+
     /**
      * This method fetches the rates from the web-sites and displays them in the rate bar.
      */
@@ -450,25 +463,31 @@ public class RateBar extends JPanel
     {
         //System.out.println("Fetching rates...");
         fetchRatesInProgress=true;
-        boolean usdConvFactorSaved = getUsdToCurrentCurrencyConvFactor();
-        metals.removeAllElements();
-        rates.removeAllElements();
-        if(metals.isEmpty())
+        try
         {
-            for(int i=0; i<11; i++)
+            boolean usdConvFactorSaved = getUsdToCurrentCurrencyConvFactor();
+            metals.removeAllElements();
+            rates.removeAllElements();
+            if(metals.isEmpty())
             {
-                blocks[i+1].setText("Fetching..", "Please wait");
-                blocks[i+1].paintImmediately(blocks[i+1].getVisibleRect());
+                for(int i=0; i<11; i++)
+                {
+                    blocks[i+1].setText("Fetching..", "Please wait");
+                    blocks[i+1].paintImmediately(blocks[i+1].getVisibleRect());
+                }
             }
+            // A changed web page must not stop rate updates for good, so treat it as "no rates".
+            HashMap<String, String> preciousMap = withoutFailure(this::getRatesFromKitcoDotCom);
+            HashMap<String, String> baseMap = withoutFailure(this::getRatesFromKitcometalsDotCom);
+            saveMetalAndRates(preciousMap, baseMap);
+            updateMetalRates(usdConvFactorSaved ? Double.valueOf(fileOps.getValue("$convfactor", "1D")) : 1D);
         }
-        HashMap<String, String> preciousMap = getRatesFromKitcoDotCom();
-        HashMap<String, String> baseMap = getRatesFromKitcometalsDotCom();
-//        System.out.println(preciousMap);
-        saveMetalAndRates(preciousMap, baseMap);
-        
-        updateMetalRates(usdConvFactorSaved ? Double.valueOf(fileOps.getValue("$convfactor", "1D")) : 1D);
-        fetchRatesInProgress=false;
-        notifyAll();
+        finally
+        {
+            // Always clear the flag; a stuck flag stopped rate clicks and auto refresh for good.
+            fetchRatesInProgress=false;
+            notifyAll();
+        }
 //        System.out.println("Done.");
     }
     
