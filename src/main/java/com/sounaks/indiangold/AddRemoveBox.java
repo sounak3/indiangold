@@ -303,7 +303,7 @@ public class AddRemoveBox extends JDialog
                 setRateBarConfigEnabled(rbRateBar.isSelected() || rbBoth.isSelected());
                 setCalculatorConfigEnabled(rbCalculator.isSelected() || rbBoth.isSelected());
                 rbRateBarClickPolicy1.setSelected(fOps.getValue("$clickcondition", "1").equals("1"));
-                rbRateBarClickPolicy2.setSelected(fOps.getValue("$clickcondition", "2").equals("2"));
+                rbRateBarClickPolicy2.setSelected(fOps.getValue("$clickcondition", "1").equals("2"));
                 labelClicks.setText(rbRateBarClickPolicy1.isSelected()?"right click":"left click");
                 init();
                 ready = true;

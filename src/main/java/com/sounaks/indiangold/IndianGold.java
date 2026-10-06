@@ -389,17 +389,49 @@ public class IndianGold extends JFrame
             if(RateBar.PRECIOUS_METALS_STRING.contains(label.getName().toLowerCase()))
             {
                 noOfUnitsField.setText(fOps.getValue("$punitspercurrency", "1"));
-                weightUnitCombo2.setSelectedItem(fOps.getValue("$punit", weightList.elementAt(1)));
+                weightUnitCombo2.setSelectedItem(fOps.getValue("$punit", (String)weightUnitCombo2.getSelectedItem()));
             }
             else if(RateBar.BASE_METALS_STRING.contains(label.getName().toLowerCase()))
             {
                 noOfUnitsField.setText(fOps.getValue("$bunitspercurrency", "1"));
-                weightUnitCombo2.setSelectedItem(fOps.getValue("$bunit", weightList.elementAt(1)));
+                weightUnitCombo2.setSelectedItem(fOps.getValue("$bunit", (String)weightUnitCombo2.getSelectedItem()));
             }
             String unit=(String) weightUnitCombo2.getSelectedItem();
             if(unit.contains("(") && unit.contains(")") && unit.indexOf("(") < unit.indexOf(")"))
                 labelWeightUnit.setText(unit.substring(unit.indexOf("(")+1, unit.indexOf(")")));
         }
+    }
+
+    /**
+     * Shows the About dialog over the main window, with a clickable e-mail link.
+     */
+    private void showAbout()
+    {
+        JEditorPane text = new JEditorPane("text/html", "<html>" + NAME_STRING_FULL + "<p>Created and developed by Sounak Choudhury<p>"
+                + "E-mail: <a href='mailto:contact@sounaks.com'>contact@sounaks.com</a><p><p>"
+                + "This software is provided \"AS IS\", without warranty of any kind,<br>"
+                + "under the GNU General Public License version 3 (see LICENSE.txt).<p>"
+                + "Suggestions and credits are welcome.</html>");
+        text.setEditable(false);
+        text.setOpaque(false);
+        text.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, Boolean.TRUE);
+        text.setFont(UIManager.getFont("Label.font"));
+        text.addHyperlinkListener(he -> {
+            if(he.getEventType() == javax.swing.event.HyperlinkEvent.EventType.ACTIVATED && Desktop.isDesktopSupported()
+                    && Desktop.getDesktop().isSupported(Desktop.Action.MAIL))
+            {
+                try
+                {
+                    Desktop.getDesktop().mail(he.getURL().toURI());
+                }
+                catch(IOException | java.net.URISyntaxException e)
+                {
+                    System.out.println("Cannot open the e-mail program: " + e);
+                }
+            }
+        });
+        ImageIcon imageicon = new ImageIcon(IndianGold.class.getResource("/duke.gif"));
+        JOptionPane.showMessageDialog(this, text, "About IndianGold", JOptionPane.INFORMATION_MESSAGE, imageicon);
     }
 
     private class PrivateActionAdapter implements ActionListener
@@ -410,9 +442,7 @@ public class IndianGold extends JFrame
             Object src = ae.getSource();
             if(src.equals(abtButton))
             {
-                String s1 = "<html>Created and Developed by : Sounak Choudhury<p>E-mail Address : <a href='mailto:contact@sounaks.com'>contact@sounaks.com</a><p>The software, information and documentation<p>is provided \"AS IS\" without warranty of any<p>kind, either expressed or implied. The Readme.txt<p>file containing EULA must be read before use.<p>Suggestions and credits are Welcomed.</html>";
-                ImageIcon imageicon = new ImageIcon(Thread.currentThread().getContextClassLoader().getResource("duke.gif"));
-                JOptionPane.showMessageDialog(new Frame(), s1, "About IndianGold...", 1, imageicon);
+                showAbout();
             }
             else if(src.equals(setButton))
             {
