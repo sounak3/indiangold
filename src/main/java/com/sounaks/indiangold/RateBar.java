@@ -373,7 +373,8 @@ public class RateBar extends JPanel
      */
     public void updateMetalRates(double usdConvFactor)
     {
-        DecimalFormat formatter = new DecimalFormat("###########0.00");
+        // Locale.ROOT: the rate is copied into the calculator's number field, which only accepts "." as the decimal point.
+        DecimalFormat formatter = new DecimalFormat("###########0.00", java.text.DecimalFormatSymbols.getInstance(java.util.Locale.ROOT));
         String t1, t2;
         double punitsPerCurrency = Double.valueOf(fileOps.getValue("$punitspercurrency", "1"));
         double pUnitsInMg = getMilligramValueFor(fileOps.getValue("$punit", ":)"));

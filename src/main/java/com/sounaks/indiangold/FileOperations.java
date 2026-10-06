@@ -331,6 +331,17 @@ class FileOperations
 	{
 		return props.getProperty(pName, pValue);
 	}
+
+        /**
+         * Checks whether a unit exists in the unit list, checked or not.
+         * @param name The unit name without the * or _ prefix; case does not matter.
+         * @return True if the unit is in the list.
+         */
+	boolean hasUnit(String name)
+	{
+		String key = name.toLowerCase();
+		return props.containsKey("*" + key) || props.containsKey("_" + key);
+	}
         
 	/**
          * Sets i.e. adds the given unit if the unit is not present or updates if the given unit is already present in the unit list, with the given value.

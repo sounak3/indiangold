@@ -69,22 +69,7 @@ public class AddRemoveBox extends JDialog
                     {
                         if(!unitEditableList.isSelectionEmpty() && ke.getKeyChar() == KeyEvent.VK_SPACE)
                         {
-                            int i = unitEditableList.getSelectedIndex();
-                            if(i >= unitEditableList.getFirstVisibleIndex() && i <= unitEditableList.getLastVisibleIndex())
-                            {
-                                int x = unitEditableList.getSelectedIndex();
-                                CheckableItem ci = (CheckableItem)unitEditableList.getModel().getElementAt(x);
-                                String buff = fOps.getValue(ci.fullName(), "NONE");
-                                if(!buff.equals("NONE"))
-                                {
-                                    fOps.removeValue(ci.fullName()); // full name before click
-                                    ci.setSelected(!ci.isSelected());
-                                    Rectangle rect = unitEditableList.getCellBounds(x,x);
-                                    unitEditableList.repaint(rect);
-                                    fOps.setValue(ci.fullName(), buff); // full name after click (this will add/remove the _ based on boolean code 2 lines up)
-                                    //reload();		reload not done as no new item is added/removed and checking is already visible through input events
-                                }
-                            }
+                            toggleUnit(unitEditableList.getSelectedIndex());
                         }
                     }
                 });
@@ -385,6 +370,24 @@ public class AddRemoveBox extends JDialog
             comboVisDecimals.setEnabled(enabled);
         }
         
+        /**
+         * Checks or unchecks the unit at the given list index.
+         * @param index The list index of the unit.
+         */
+        private void toggleUnit(int index)
+        {
+                if(index < 0) return;
+                CheckableItem ci = (CheckableItem)unitEditableList.getModel().getElementAt(index);
+                String buff = fOps.getValue(ci.fullName(), "NONE");
+                if(!buff.equals("NONE"))
+                {
+                        fOps.removeValue(ci.fullName()); // full name before click
+                        ci.setSelected(!ci.isSelected());
+                        unitEditableList.repaint(unitEditableList.getCellBounds(index, index));
+                        fOps.setValue(ci.fullName(), buff); // full name after click (adds/removes the _ or *)
+                }
+        }
+
 	private void displayNumRows(int rows)
 	{
 		unitEditableList.setVisibleRowCount(rows);
@@ -467,7 +470,7 @@ public class AddRemoveBox extends JDialog
 			if(newProp == null) //Verify if newProp exists. If 1 doesn't exist then all 4 doesn't exists.
 			{	//do nothing.
 			}
-			else if(fOps.getValue(newProp.substring(1),"NONE").substring(1).equals("NONE")) //Execute if newProp not exists in propProp
+			else if(!fOps.hasUnit(newProp.substring(1))) //Execute if newProp not exists in propProp
 			{
 				addOperation(newProp, newVal, oldProp, oldVal);
 			}
@@ -607,18 +610,16 @@ public class AddRemoveBox extends JDialog
             Component src=me.getComponent();
             if(src.equals(unitEditableList))
             {
-		int x = unitEditableList.locationToIndex(me.getPoint());
-		CheckableItem ci = (CheckableItem)unitEditableList.getModel().getElementAt(x);
-		String buff = fOps.getValue(ci.fullName(), "NONE");
-		if(!buff.equals("NONE"))
-		{
-			fOps.removeValue(ci.fullName()); // full name before click
-			ci.setSelected(!ci.isSelected());
-			Rectangle rect = unitEditableList.getCellBounds(x,x);
-			unitEditableList.repaint(rect);
-			fOps.setValue(ci.fullName(), buff); // full name after click (this will add/remove the _ based on boolean code 2 lines up)
-			//reload();		reload not done as no new item is added/removed and checking is already visible through input events
-		}
+                // Only a click on the check box toggles a unit; a click on its name just selects it,
+                // and a double click on the name edits it.
+                if(CheckboxListRenderer.isOnCheckBox(unitEditableList, me.getPoint()))
+                    toggleUnit(unitEditableList.locationToIndex(me.getPoint()));
+                else if(me.getClickCount() == 2)
+                {
+                    int index = unitEditableList.locationToIndex(me.getPoint());
+                    Rectangle cell = index < 0 ? null : unitEditableList.getCellBounds(index, index);
+                    if(cell != null && cell.contains(me.getPoint())) buttonEdit.doClick();
+                }
             }
             else if(src.equals(labelCurrencyPreciousWeight) || src.equals(labelCurrencyBaseWeight))
             {
