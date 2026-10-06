@@ -235,13 +235,7 @@ public class IndianGold extends JFrame
 
         // GST
         double gst;
-        String allGst[] = fOps.getValue("$taxes", "Tax-1|0.0|Tax-2|0.0|Tax-3|0.0").split("\\|");
-        for(int i=0; i<allGst.length; i++)
-        {
-            if(allGst[i]==null && i%2 != 0) allGst[i] = "0.0";
-            if(i%2 != 0 && allGst[i].endsWith("%")) allGst[i] = allGst[i].substring(0, allGst[i].length()-1);
-        }
-        double gstPercent = Double.parseDouble(allGst[1]) + Double.parseDouble(allGst[3]) + Double.parseDouble(allGst[5]);
+        double gstPercent = TaxSettings.totalPercent(TaxSettings.parse(fOps.getValue("$taxes", TaxSettings.DEFAULT)));
         gst = (price + makingCharge - discount) * gstPercent/100;
         String gstStr = formatter.format(gst);
         String strGstPercent = formatter.format(gstPercent);
@@ -290,19 +284,31 @@ public class IndianGold extends JFrame
         String unit=(String) weightUnitCombo2.getSelectedItem();
         if(unit.contains("(") && unit.contains(")") && unit.indexOf("(") < unit.indexOf(")"))
             labelWeightUnit.setText(unit.substring(unit.indexOf("(")+1, unit.indexOf(")")));
-        currency=Currency.getInstance(fOps.getValue("$currency", "USD"));
+        currency=CurrencyCatalog.resolve(fOps.getValue("$currency", "USD"));
         costArea.setText(getCostString());
         labelRate1.setText("Rate : "+currency.getSymbol());
         showRateBar(fOps.getValue("$ratebar", "1").equals("1"));
         showMainPane(fOps.getValue("$calculator", "0").equals("1"), false);
-        String taxes[] = fOps.getValue("$taxes", "Tax-1|0.0|Tax-2|0.0|Tax-3|0.0").split("\\|");
-        labelTax1.setText(taxes[0]);
-        numTax1Field.setText(taxes[1]);
-        labelTax2.setText(taxes[2]);
-        numTax2Field.setText(taxes[3]);
-        labelTax3.setText(taxes[4]);
-        numTax3Field.setText(taxes[5]);
+        java.util.List<TaxSettings.Tax> taxes = TaxSettings.parse(fOps.getValue("$taxes", TaxSettings.DEFAULT));
+        labelTax1.setText(taxes.get(0).name());
+        numTax1Field.setText(taxes.get(0).percent());
+        labelTax2.setText(taxes.get(1).name());
+        numTax2Field.setText(taxes.get(1).percent());
+        labelTax3.setText(taxes.get(2).name());
+        numTax3Field.setText(taxes.get(2).percent());
         cards.show(p32, "MAIN");
+    }
+
+    /**
+     * Internal method to collect the taxes shown in the price panel in the form saved as $taxes.
+     * @return The taxes as a $taxes value, with empty percentages saved as zero.
+     */
+    private String taxesFromPanel()
+    {
+        return TaxSettings.format(java.util.List.of(
+                new TaxSettings.Tax(labelTax1.getText(), numTax1Field.getText()),
+                new TaxSettings.Tax(labelTax2.getText(), numTax2Field.getText()),
+                new TaxSettings.Tax(labelTax3.getText(), numTax3Field.getText())));
     }
         
     public void showMainPane(boolean show, boolean invokedByRateBar)
@@ -451,10 +457,7 @@ public class IndianGold extends JFrame
             if(!(fe.getOppositeComponent() instanceof NumberField) && nowcard && taxBoxActivated)
             {
 //                System.out.println("Save triggered from focus lost!");
-                String taxes = labelTax1.getText() + "|" + numTax1Field.getText() + "|"
-                               + labelTax2.getText() + "|" + numTax2Field.getText() + "|"
-                               + labelTax3.getText() + "|" + numTax3Field.getText();
-                fOps.setValue("$taxes", taxes);
+                fOps.setValue("$taxes", taxesFromPanel());
                 fOps.saveToFile();
                 taxBoxActivated = false;
                 cards.show(p32, "MAIN");
@@ -474,10 +477,7 @@ public class IndianGold extends JFrame
                 if(nowcard && taxBoxActivated)
                 {
 //                    System.out.println("Save triggered from focus gained!");
-                    String taxes = labelTax1.getText() + "|" + numTax1Field.getText() + "|"
-                                   + labelTax2.getText() + "|" + numTax2Field.getText() + "|"
-                                   + labelTax3.getText() + "|" + numTax3Field.getText();
-                    fOps.setValue("$taxes", taxes);
+                    fOps.setValue("$taxes", taxesFromPanel());
                     fOps.saveToFile();
                     taxBoxActivated = false;
                     cards.show(p32, "MAIN");
@@ -507,7 +507,7 @@ public class IndianGold extends JFrame
         shAdapter=new ShowHideAdapter();
         fAdapter = new NumberFieldFocusAdapter();
         aAdapter = new PrivateActionAdapter();
-        currency = Currency.getInstance(fOps.getValue("$currency", "USD"));
+        currency = CurrencyCatalog.resolve(fOps.getValue("$currency", "USD"));
         JTextField[] fields = new JTextField[11];
         labelWt = new JLabel("Wt.");
         weightField=new NumberField(13, false);
