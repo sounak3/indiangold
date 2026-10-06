@@ -1,0 +1,5 @@
+# Built-in provider definitions, in their default priority order.
+gold-api.properties
+westmetall.properties
+currency-api.properties
+metals-dev.properties

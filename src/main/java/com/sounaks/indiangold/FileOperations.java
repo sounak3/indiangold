@@ -19,10 +19,6 @@ package com.sounaks.indiangold;
 import java.util.*;
 import java.io.*;
 import java.net.URISyntaxException;
-import java.nio.file.AtomicMoveNotSupportedException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 
 /**
  * Loads and saves the software properties file. The user's copy lives in ~/.indiangold, so saving works
@@ -202,29 +198,7 @@ class FileOperations
          */
 	static void writeProperties(File file, Properties content, String header) throws IOException
 	{
-		Path target = file.toPath();
-		Files.createDirectories(target.getParent());
-		Path temp = Files.createTempFile(target.getParent(), file.getName(), ".tmp");
-		try
-		{
-			try(OutputStream out = new BufferedOutputStream(Files.newOutputStream(temp)))
-			{
-				content.store(out, header);
-			}
-			if(Files.exists(target)) Files.copy(target, backupOf(file).toPath(), StandardCopyOption.REPLACE_EXISTING);
-			try
-			{
-				Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-			}
-			catch(AtomicMoveNotSupportedException e)
-			{
-				Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING);
-			}
-		}
-		finally
-		{
-			Files.deleteIfExists(temp);
-		}
+		com.sounaks.indiangold.rates.SafeFiles.writeProperties(file.toPath(), content, header);
 	}
 
         /**
