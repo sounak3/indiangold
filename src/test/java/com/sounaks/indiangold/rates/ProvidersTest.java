@@ -158,6 +158,7 @@ class ProvidersTest
 		RateProvider.Usage usage = server.builtIn("metals-dev").createProvider().usage(LocalServer.context("k")).orElseThrow();
 
 		assertEquals(new RateProvider.Usage("Free", 100, 12), usage);
+		assertTrue(server.builtIn("metals-dev").createProvider().signupHint().orElseThrow().contains("Get Access Code"));
 		assertEquals(88, usage.remaining());
 	}
 

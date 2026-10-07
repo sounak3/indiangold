@@ -43,12 +43,14 @@ final class ScheduleDialog extends JDialog
 	private final List<JSpinner> times = new ArrayList<>();
 	private final JLabel budget = new JLabel();
 	private final RateProvider provider;
+	private final int quota;
 	private List<LocalTime> result;
 
-	private ScheduleDialog(Dialog owner, RateProvider provider, List<LocalTime> current)
+	private ScheduleDialog(Dialog owner, RateProvider provider, int quota, List<LocalTime> current)
 	{
 		super(owner, "Update schedule: " + provider.name(), true);
 		this.provider = provider;
+		this.quota = quota;
 		JPanel rows = new JPanel(new GridLayout(MAX_TIMES, 1, 0, 4));
 		for(int i = 0; i < MAX_TIMES; i++)
 		{
@@ -68,8 +70,8 @@ final class ScheduleDialog extends JDialog
 			enabled.add(on);
 			times.add(spinner);
 		}
-		JLabel intro = new JLabel("<html>" + provider.name() + " allows " + provider.monthlyQuota() + " requests a month. It is updated at these times<br>"
-				+ "(or once when IndianGold starts, if a time was missed). Manual updates use what is left.</html>");
+		JLabel intro = new JLabel("<html>Your " + provider.name() + " plan allows " + quota + " requests a month. It is updated at these times<br>"
+				+ "(or once when IndianGold starts, if a time was missed), but never beyond today's share,<br>so the quota lasts the whole month. Manual updates use what is left.</html>");
 		JButton ok = new JButton("OK");
 		ok.addActionListener(e -> {
 			result = new ArrayList<>();
@@ -103,11 +105,11 @@ final class ScheduleDialog extends JDialog
 		long perDay = enabled.stream().filter(JCheckBox::isSelected).count() * provider.requestsPerFetch();
 		int days = LocalDate.now().lengthOfMonth();
 		long scheduled = perDay * days;
-		long left = provider.monthlyQuota() - scheduled;
+		long left = quota - scheduled;
 		budget.setText("<html>" + perDay + " update" + (perDay == 1 ? "" : "s") + " a day \u00d7 " + days + " days = " + scheduled + " of "
-				+ provider.monthlyQuota() + " requests; "
+				+ quota + " requests; "
 				+ (left >= 0 ? "about " + left + " left for manual updates this month."
-						: "<font color=red>" + (-left) + " more than the quota allows; the last days of the month would get no updates.</font>")
+						: "<font color=#a06000>" + (-left) + " more than the quota allows; on some days only the first times run.</font>")
 				+ "</html>");
 	}
 
@@ -125,9 +127,9 @@ final class ScheduleDialog extends JDialog
 	 * Shows the dialog.
 	 * @return The chosen times, or null if cancelled; an empty list means no automatic updates.
 	 */
-	static List<LocalTime> ask(Dialog owner, RateProvider provider, List<LocalTime> current)
+	static List<LocalTime> ask(Dialog owner, RateProvider provider, int quota, List<LocalTime> current)
 	{
-		ScheduleDialog dialog = new ScheduleDialog(owner, provider, current);
+		ScheduleDialog dialog = new ScheduleDialog(owner, provider, quota, current);
 		dialog.setVisible(true);
 		return dialog.result;
 	}

@@ -217,6 +217,23 @@ public final class RateStore
 	}
 
 	/**
+	 * Gets the monthly total a provider last reported for the user's plan.
+	 * @param providerId The provider.
+	 * @return The total, or empty if it never reported one.
+	 */
+	public synchronized Optional<Integer> reportedQuota(String providerId)
+	{
+		try
+		{
+			return Optional.ofNullable(values.getProperty("quota." + providerId + ".reportedTotal")).map(Integer::parseInt).filter(total -> total > 0);
+		}
+		catch(NumberFormatException e)
+		{
+			return Optional.empty();
+		}
+	}
+
+	/**
 	 * Gets the quota budget of a provider.
 	 * @param providerId The provider.
 	 * @param monthlyQuota Requests allowed per month.
@@ -268,13 +285,17 @@ public final class RateStore
 			return Math.max(0, quota - usedThisMonth());
 		}
 
-		/** Today's share: what is left this month (not counting today) divided by the days left, today included. */
+		/**
+		 * Today's share: what is left this month (not counting today) divided by the days left, today included,
+		 * rounded. Rounding spreads a small quota evenly: 25 requests over 24 days give one a day, and 10 over 24 give
+		 * one on some days and none on others.
+		 */
 		public int allowanceToday()
 		{
 			LocalDate today = LocalDate.now(clock);
 			int daysLeft = today.lengthOfMonth() - today.getDayOfMonth() + 1;
 			int leftAtStartOfToday = quota - (usedThisMonth() - usedToday());
-			return Math.max(0, leftAtStartOfToday / daysLeft);
+			return (int)Math.max(0, Math.round((double)leftAtStartOfToday / daysLeft));
 		}
 
 		public int remainingToday()
@@ -296,11 +317,15 @@ public final class RateStore
 			}
 		}
 
-		/** Takes the provider's own count, which also includes requests made from other computers with the same key. */
+		/**
+		 * Takes the provider's own count, which also includes requests made from other computers with the same key,
+		 * and remembers the plan's monthly total (e.g. 25 instead of 100 for some accounts).
+		 */
 		public void syncWith(RateProvider.Usage usage)
 		{
 			synchronized(RateStore.this)
 			{
+				if(usage.total() > 0) values.setProperty(prefix + "reportedTotal", String.valueOf(usage.total()));
 				int today = usedToday();
 				values.setProperty(prefix + "month", YearMonth.now(clock).toString());
 				values.setProperty(prefix + "used", String.valueOf(Math.max(usage.used(), today)));

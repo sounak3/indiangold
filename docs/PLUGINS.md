@@ -135,6 +135,7 @@ Only `id`, `name`, `type`, an address and one metal are required.
 | `url`, `url.fallback` | the address; the fallback is tried if the first can't be reached or answers with a server error |
 | `apikey=required` | the URLs contain `{apikey}`; the user enters the key in the app |
 | `signup`, `terms` | pages for "Get a free key..." and "Terms of use" |
+| `signup.hint` | advice shown next to "Get a free key...", e.g. which sign-in gives the bigger free plan |
 | `currency` | ISO code of the prices (default `USD`) |
 | `minInterval` | minutes between fetches, or an ISO duration such as `PT6H`; at least 60 for web pages |
 | `quota.monthly`, `schedule` | requests allowed per month, and the default fetch times (e.g. `10:30,16:30`) |
@@ -173,6 +174,7 @@ Optional methods (override as needed):
 |---|---|---|
 | `boolean needsApiKey()` | `false` | the user must enter a key; read it with `context.settings().apiKey()` |
 | `Optional<URI> signupPage()`, `termsPage()` | empty | there is a page to get a key, or terms of use |
+| `Optional<String> signupHint()` | empty | users should know something when getting a key |
 | `boolean providesFx()` | `false` | the snapshot includes exchange rates |
 | `boolean isWebPage()` | `false` | you read a web page; the user is shown a disclaimer |
 | `Duration minInterval()` | 1 minute | the source must not be asked more often (use at least 1 hour for web pages) |

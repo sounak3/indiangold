@@ -228,7 +228,30 @@ public final class RateService implements AutoCloseable
 
 	public RateStore.QuotaBudget budget(RateProvider provider)
 	{
-		return store.budget(provider.id(), provider.monthlyQuota(), clock);
+		return store.budget(provider.id(), quotaOf(provider), clock);
+	}
+
+	/** Setting name for the requests per month the user's plan allows, if it differs from the provider's default. */
+	public static final String QUOTA_SETTING = "quota";
+
+	/**
+	 * The requests per month the user's plan allows: what the user entered, else what the provider last reported
+	 * ("Check usage"), else the provider's default. Plans differ: Metals.Dev's free plan allows 100, or 25 for
+	 * accounts that sign in with access codes.
+	 */
+	public int quotaOf(RateProvider provider)
+	{
+		Optional<Integer> entered = settings.providerSettings(provider.id()).get(QUOTA_SETTING).flatMap(text -> {
+			try
+			{
+				return Optional.of(Integer.parseInt(text.trim())).filter(value -> value > 0);
+			}
+			catch(NumberFormatException e)
+			{
+				return Optional.empty();
+			}
+		});
+		return entered.or(() -> store.reportedQuota(provider.id())).orElse(provider.monthlyQuota());
 	}
 
 	public Status status(RateProvider provider)
@@ -313,7 +336,9 @@ public final class RateService implements AutoCloseable
 		Optional<Instant> last = store.lastAttempt(provider.id());
 		if(provider.monthlyQuota() > 0)
 		{
-			if(budget(provider).remainingThisMonth() < provider.requestsPerFetch()) return false;
+			// Scheduled updates stay within today's share, so the month's quota lasts the whole month.
+			RateStore.QuotaBudget budget = budget(provider);
+			if(budget.remainingThisMonth() < provider.requestsPerFetch() || budget.remainingToday() < provider.requestsPerFetch()) return false;
 			if(provider.needsApiKey() && settings.providerSettings(provider.id()).apiKey().isEmpty()) return false;
 			Optional<Instant> slot = lastScheduledTime(provider, now);
 			return slot.isPresent() && (last.isEmpty() || last.get().isBefore(slot.get()));

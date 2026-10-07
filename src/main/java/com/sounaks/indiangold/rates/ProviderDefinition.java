@@ -39,7 +39,7 @@ import java.util.regex.Pattern;
  * </ul>
  * Keys (only {@code id}, {@code name}, {@code type}, a URL and one metal are required):
  * <pre>
- * id, name, type, description, signup, terms
+ * id, name, type, description, signup, signup.hint, terms
  * apikey=required            the URL contains {apikey}
  * url, url.fallback          tried in order when the first cannot be reached
  * currency=USD               currency of the prices (default USD)

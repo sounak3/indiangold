@@ -63,6 +63,12 @@ public interface RateProvider
 		return Optional.empty();
 	}
 
+	/** Advice shown next to "Get a free key...", e.g. which sign-in gives the bigger free plan. */
+	default Optional<String> signupHint()
+	{
+		return Optional.empty();
+	}
+
 	/** The source's terms of use, shown next to it in the settings. */
 	default Optional<URI> termsPage()
 	{

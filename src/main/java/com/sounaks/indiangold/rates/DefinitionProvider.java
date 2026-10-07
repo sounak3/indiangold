@@ -94,6 +94,12 @@ abstract class DefinitionProvider implements RateProvider
 	}
 
 	@Override
+	public Optional<String> signupHint()
+	{
+		return definition.property("signup.hint");
+	}
+
+	@Override
 	public Optional<URI> termsPage()
 	{
 		return definition.termsPage();

@@ -340,6 +340,7 @@ final class MarketRatesPanel extends JPanel
 				keyRow.add(get);
 			});
 			lines.add(keyRow);
+			provider.signupHint().ifPresent(hint -> lines.add(new JLabel("<html><div style='width:520px'><font color=#a06000>" + RateBar.escape(hint) + "</font></div></html>")));
 			lines.add(new JLabel("<html><font color=gray>The key is kept in your own settings file on this computer. Most providers allow one free account per person.</font></html>"));
 		}
 
@@ -348,12 +349,24 @@ final class MarketRatesPanel extends JPanel
 		{
 			var budget = service.budget(provider);
 			List<java.time.LocalTime> times = settings.schedule(provider.id()).orElse(provider.defaultSchedule());
+			JSpinner quota = new JSpinner(new SpinnerNumberModel(service.quotaOf(provider), 1, 10_000_000, 1));
+			quota.setToolTipText("<html>The requests per month your plan allows. Metals.Dev's free plan allows 100,<br>"
+					+ "or 25 for accounts that sign in with an access code. \"Check usage\" fills this in.</html>");
+			quota.addChangeListener(e -> {
+				providerSettings.put(RateService.QUOTA_SETTING, String.valueOf(quota.getValue()));
+				SwingUtilities.invokeLater(this::showDetails);
+			});
+			JPanel quotaRow = new JPanel(new FlowLayout(FlowLayout.LEADING));
+			quotaRow.add(new JLabel("Your plan allows"));
+			quotaRow.add(quota);
+			quotaRow.add(new JLabel("requests a month."));
+			lines.add(quotaRow);
 			lines.add(new JLabel("<html>Used this month: " + budget.usedThisMonth() + " of " + budget.monthlyQuota()
-					+ " requests; today's share: " + budget.remainingToday() + " left.<br>Automatic updates: "
+					+ "; today's share: " + budget.remainingToday() + " left (scheduled updates stay within it).<br>Automatic updates: "
 					+ (times.isEmpty() ? "off" : String.join(", ", times.stream().map(Object::toString).toList())) + "</html>"));
 			JButton schedule = new JButton("Schedule...");
 			schedule.addActionListener(e -> {
-				List<java.time.LocalTime> chosen = ScheduleDialog.ask(owner, provider, times);
+				List<java.time.LocalTime> chosen = ScheduleDialog.ask(owner, provider, service.quotaOf(provider), times);
 				if(chosen != null)
 				{
 					settings.setSchedule(provider.id(), chosen);

@@ -166,6 +166,56 @@ class RateServiceTest
 	}
 
 	@Test
+	void aSmallQuotaIsSpreadOverTheRestOfTheMonth()
+	{
+		TestClock clock = new TestClock("2026-10-08T09:00:00");
+		RateStore.QuotaBudget budget = RateStore.inMemory().budget("p", 25, clock);
+
+		assertEquals(1, budget.allowanceToday(), "25 requests over the 24 days left");
+		budget.record(1);
+		assertEquals(0, budget.remainingToday());
+
+		RateStore.QuotaBudget tight = RateStore.inMemory().budget("p", 10, clock);
+		assertEquals(0, tight.allowanceToday(), "10 over 24 days: not every day");
+		clock.set("2026-10-20T09:00:00");
+		assertEquals(1, tight.allowanceToday(), "10 over 12 days rounds to one a day");
+	}
+
+	@Test
+	void theQuotaComesFromTheUserThenTheProviderThenTheDefault()
+	{
+		TestClock clock = new TestClock("2026-10-08T09:00:00");
+		FakeProvider limited = new FakeProvider("limited", 100, Duration.ofMinutes(1));
+		TestSettings settings = new TestSettings();
+		RateStore store = RateStore.inMemory();
+		RateService service = service(clock, settings, store, limited);
+
+		assertEquals(100, service.quotaOf(limited));
+		service.budget(limited).syncWith(new RateProvider.Usage("Free", 25, 3)); // an access-code account
+		assertEquals(25, service.quotaOf(limited));
+		assertEquals(22, service.budget(limited).remainingThisMonth());
+		settings.providerSettings("limited").put(RateService.QUOTA_SETTING, "50");
+		assertEquals(50, service.quotaOf(limited));
+	}
+
+	@Test
+	void scheduledUpdatesStayWithinTodaysShare()
+	{
+		TestClock clock = new TestClock("2026-10-08T11:00:00");
+		FakeProvider limited = new FakeProvider("limited", 25, Duration.ofMinutes(1));
+		RateService service = service(clock, new TestSettings(), RateStore.inMemory(), limited);
+
+		service.fetchDue();
+		assertEquals(1, limited.fetches.get(), "the 10:30 update");
+		clock.set("2026-10-08T16:31:00");
+		service.fetchDue();
+		assertEquals(1, limited.fetches.get(), "16:30 is skipped: today's share of 25 a month is one");
+		clock.set("2026-10-09T10:31:00");
+		service.fetchDue();
+		assertEquals(2, limited.fetches.get(), "a new day, a new share");
+	}
+
+	@Test
 	void providerUsageReplacesTheLocalCount()
 	{
 		TestClock clock = new TestClock("2026-10-07T09:00:00");
