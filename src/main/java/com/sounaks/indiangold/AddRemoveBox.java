@@ -32,22 +32,25 @@ public class AddRemoveBox extends JDialog
 	private final JList unitEditableList;
 	private final JButton buttonAdd,buttonEdit,buttonRemove,buttonSave,buttonCancel;
 	private final JScrollPane unitListScrollPane;
-        private final JLabel labelVisRows, labelComboCurrency, labelPreciousWeight, labelCurrencyPreciousWeight, labelPer1, labelClicks, labelMinutes, labelBaseWeight, labelCurrencyBaseWeight, labelPer2, labelVisDecimals;
-        private final NumberField numPreciousWeight, numBaseWeight;
-        private final JComboBox comboVisDecimals,comboCurrency,comboVisRows,comboPreciousWeightUnit,comboBaseWeightUnit,comboAutoFetchMinutes;
+        private final JLabel labelVisRows, labelComboCurrency, labelClicks, labelMinutes, labelVisDecimals, labelRateUnits;
+        private final JButton buttonCustomizeRates;
+        private final MarketSettings marketSettings;
+        private final com.sounaks.indiangold.rates.RateService rateService;
+        private final JComboBox comboVisDecimals,comboCurrency,comboVisRows,comboAutoFetchMinutes;
         private final JRadioButton rbCalculator, rbRateBar, rbBoth, rbManualFetchRates, rbAutoFetchRates, rbRateBarClickPolicy1, rbRateBarClickPolicy2;
 	FileOperations fOps;
         MouseClicks clickAdapter;
         ActionAdapter actionAdapter;
         Vector <String>propData;
 	Vector <String>propProp;
-        Vector <String>weightList;
         private boolean ready = false;
 	private final JDialog thisone;
         
-	AddRemoveBox(JFrame parent, FileOperations file)
+	AddRemoveBox(JFrame parent, FileOperations file, MarketSettings marketSettings, com.sounaks.indiangold.rates.RateService rateService)
 	{
 		super(parent, "Settings...");
+		this.marketSettings = marketSettings;
+		this.rateService = rateService;
                 thisone = this;
                 JPanel pane=(JPanel)super.getContentPane();
 		fOps=file;
@@ -169,56 +172,21 @@ public class AddRemoveBox extends JDialog
                 rp2.add(rp22);
                 rp22.setAlignmentX(LEFT_ALIGNMENT);                
                 rp2.add(Box.createRigidArea(new Dimension(0,10)));
-                weightList=new Vector<String>();
-
-                labelPreciousWeight=new JLabel("<html>Rate of <font color=red>Precious Metals</font> is measured in:</html>");
-                rp2.add(labelPreciousWeight);
-                labelPreciousWeight.setAlignmentX(LEFT_ALIGNMENT);
-                rp2.add(Box.createRigidArea(new Dimension(0,10)));
+                // Market prices are shown in the user's own units for each metal group; see CustomizeRatesDialog.
                 JPanel rp23=new JPanel();
                 rp23.setLayout(new BoxLayout(rp23, BoxLayout.LINE_AXIS));
-                rp23.add(Box.createHorizontalStrut(50));
-                labelCurrencyPreciousWeight=new JLabel(fOps.getValue("$currency", "USD"));
-                labelCurrencyPreciousWeight.setBorder(BorderFactory.createEtchedBorder());
-                rp23.add(labelCurrencyPreciousWeight);
-                rp23.add(Box.createHorizontalStrut(5));
-		labelPer1=new JLabel("per");
-                rp23.add(labelPer1);
-                rp23.add(Box.createHorizontalStrut(5));
-		numPreciousWeight=new NumberField(5, false);
-                rp23.add(numPreciousWeight);
-                rp23.add(Box.createHorizontalStrut(5));
-		comboPreciousWeightUnit=new JComboBox(weightList);
-                comboPreciousWeightUnit.setActionCommand("WEIGHT_COMBO_CLICK");
-                comboPreciousWeightUnit.addActionListener(actionAdapter);
-                rp23.add(comboPreciousWeightUnit);
+                labelRateUnits=new JLabel(CustomizeRatesDialog.summary(marketSettings));
+                labelRateUnits.setToolTipText("<html>The rate bar shows market prices converted to these units.<br>Clicking a rate fills the calculator with the same unit.</html>");
+                buttonCustomizeRates=new JButton("Customize rates...");
+                buttonCustomizeRates.setToolTipText("Choose the quantity and unit for each metal group, and the gold rows (24K, 22K, ...)");
+                buttonCustomizeRates.setActionCommand("CUSTOMIZE_RATES");
+                buttonCustomizeRates.addActionListener(actionAdapter);
+                rp23.add(labelRateUnits);
+                rp23.add(Box.createHorizontalStrut(10));
+                rp23.add(Box.createHorizontalGlue());
+                rp23.add(buttonCustomizeRates);
                 rp2.add(rp23);
                 rp23.setAlignmentX(LEFT_ALIGNMENT);
-                rp2.add(Box.createRigidArea(new Dimension(0,10)));
-                
-		labelBaseWeight=new JLabel("<html>Rate of <font color=blue>Base Metals</font> is measured in:</html>");
-                rp2.add(labelBaseWeight);
-                labelBaseWeight.setAlignmentX(LEFT_ALIGNMENT);
-                rp2.add(Box.createRigidArea(new Dimension(0,10)));
-                JPanel rp24=new JPanel();
-                rp24.setLayout(new BoxLayout(rp24, BoxLayout.LINE_AXIS));
-                rp24.add(Box.createHorizontalStrut(50));
-                labelCurrencyBaseWeight=new JLabel(fOps.getValue("$currency", "USD"));
-                labelCurrencyBaseWeight.setBorder(BorderFactory.createEtchedBorder());
-                rp24.add(labelCurrencyBaseWeight);
-                rp24.add(Box.createHorizontalStrut(5));
-		labelPer2=new JLabel("per");
-                rp24.add(labelPer2);
-                rp24.add(Box.createHorizontalStrut(5));
-		numBaseWeight=new NumberField(5, false);
-                rp24.add(numBaseWeight);
-                rp24.add(Box.createHorizontalStrut(5));
-		comboBaseWeightUnit=new JComboBox(weightList);
-                comboBaseWeightUnit.setActionCommand("WEIGHT_COMBO_CLICK");
-                comboBaseWeightUnit.addActionListener(actionAdapter);
-                rp24.add(comboBaseWeightUnit);
-                rp2.add(rp24);
-                rp24.setAlignmentX(LEFT_ALIGNMENT);
                 rp2.add(Box.createRigidArea(new Dimension(0,10)));
                 rbRateBarClickPolicy1=new JRadioButton("Single click to fill the rate and Double click to show/hide calculator");
                 rbRateBarClickPolicy1.setActionCommand("RATE_BAR_CLICK");
@@ -291,14 +259,6 @@ public class AddRemoveBox extends JDialog
                 rbBoth.setSelected(both); //will depend on settings
                 comboAutoFetchMinutes.setSelectedItem(fOps.getValue("$rateauto", "2").equals("0")?"2":fOps.getValue("$rateauto", "2"));
 
-                String tmp=fOps.getValue("$punit", "NONE"); // this and following lines for selecting punit and bunit combo boxes
-                if(tmp.equals("NONE")) comboPreciousWeightUnit.setSelectedIndex(comboPreciousWeightUnit.getSelectedIndex()==-1 ? (weightList.isEmpty()?-1:0) : comboPreciousWeightUnit.getSelectedIndex());
-                else comboPreciousWeightUnit.setSelectedItem((fOps.getValue("*"+tmp, "NONE").equals("NONE") && fOps.getValue("_"+tmp, "NONE").equals("NONE")) ? comboPreciousWeightUnit.getItemAt(0) : tmp);
-                tmp=fOps.getValue("$bunit", "NONE");
-                if(tmp.equals("NONE")) comboBaseWeightUnit.setSelectedIndex(comboBaseWeightUnit.getSelectedIndex()==-1 ? (weightList.isEmpty()?-1:0) : comboBaseWeightUnit.getSelectedIndex());
-                else comboBaseWeightUnit.setSelectedItem((fOps.getValue("*"+tmp, "NONE").equals("NONE") && fOps.getValue("_"+tmp, "NONE").equals("NONE")) ? comboBaseWeightUnit.getItemAt(0) : tmp);
-                numPreciousWeight.setText(fOps.getValue("$punitspercurrency", "1"));
-                numBaseWeight.setText(fOps.getValue("$bunitspercurrency", "1"));
 
                 setRateBarConfigEnabled(rbRateBar.isSelected() || rbBoth.isSelected());
                 setCalculatorConfigEnabled(rbCalculator.isSelected() || rbBoth.isSelected());
@@ -327,20 +287,6 @@ public class AddRemoveBox extends JDialog
         
         private void setRateBarConfigEnabled(boolean enabled)
         {
-                if(enabled)
-                {
-                    labelCurrencyPreciousWeight.addMouseListener(clickAdapter);
-                    labelCurrencyBaseWeight.addMouseListener(clickAdapter);
-                    labelPreciousWeight.setText("<html>Rate of <font color=red>Precious Metals</font> is measured in:</html>");
-                    labelBaseWeight.setText("<html>Rate of <font color=blue>Base Metals</font> is measured in:</html>");
-                }
-                else
-                {
-                    labelCurrencyPreciousWeight.removeMouseListener(clickAdapter);
-                    labelCurrencyBaseWeight.removeMouseListener(clickAdapter);
-                    labelPreciousWeight.setText("Rate of Precious Metals is measured in:");
-                    labelBaseWeight.setText("Rate of Base Metals is measured in:");
-                }
                 rbManualFetchRates.setEnabled(enabled);
                 labelClicks.setEnabled(enabled);
                 rbAutoFetchRates.setEnabled(enabled);
@@ -348,16 +294,8 @@ public class AddRemoveBox extends JDialog
                 labelMinutes.setEnabled(enabled);
                 labelComboCurrency.setEnabled(enabled);
                 comboCurrency.setEnabled(enabled);
-                labelPreciousWeight.setEnabled(enabled); // no effect on html label
-                labelCurrencyPreciousWeight.setEnabled(enabled);
-                labelPer1.setEnabled(enabled); // for looks
-                numPreciousWeight.setEnabled(enabled);
-                comboPreciousWeightUnit.setEnabled(enabled);
-                labelBaseWeight.setEnabled(enabled); // no effect on html label
-                labelCurrencyBaseWeight.setEnabled(enabled);
-                labelPer2.setEnabled(enabled); // for looks
-                numBaseWeight.setEnabled(enabled);
-                comboBaseWeightUnit.setEnabled(enabled);
+                labelRateUnits.setEnabled(enabled);
+                buttonCustomizeRates.setEnabled(enabled);
                 rbRateBarClickPolicy1.setEnabled(enabled);
                 rbRateBarClickPolicy2.setEnabled(enabled);
         }
@@ -371,6 +309,20 @@ public class AddRemoveBox extends JDialog
         }
         
         /**
+         * Units used to show market rates must stay in the calculator, so clicking a rate can fill it in.
+         * @param unitName The unit about to be unchecked or removed.
+         * @return True if no metal group uses it; otherwise the user is told where to change it.
+         */
+        private boolean allowedToDrop(String unitName)
+        {
+                String group = marketSettings.groupUsing(unitName);
+                if(group == null) return true;
+                JOptionPane.showMessageDialog(thisone, "\"" + unitName + "\" is used to show the " + group + " rates.\nChoose another unit for them with \"Customize rates...\" first.",
+                        "Unit in use", JOptionPane.INFORMATION_MESSAGE);
+                return false;
+        }
+
+        /**
          * Checks or unchecks the unit at the given list index.
          * @param index The list index of the unit.
          */
@@ -378,6 +330,7 @@ public class AddRemoveBox extends JDialog
         {
                 if(index < 0) return;
                 CheckableItem ci = (CheckableItem)unitEditableList.getModel().getElementAt(index);
+                if(ci.isSelected() && !allowedToDrop(ci.toString())) return;
                 String buff = fOps.getValue(ci.fullName(), "NONE");
                 if(!buff.equals("NONE"))
                 {
@@ -421,33 +374,14 @@ public class AddRemoveBox extends JDialog
 
 	private void reload()
 	{
-                String tmp;
 		propProp=fOps.getAllUnitNames();
 		propData=fOps.getAllUnitValues();
-                weightList.removeAllElements();
 		CheckableItem ci[] = new CheckableItem[propProp.size()];
 		for(int i=0; i<propProp.size(); i++)
 		{
 			ci[i] = new CheckableItem(propProp.elementAt(i));
-                        tmp=propProp.elementAt(i);
-                        if(tmp.startsWith("*") || tmp.startsWith("_"))
-                            weightList.addElement(tmp.substring(1));
 		}
 		unitEditableList.setListData(ci);
-                labelCurrencyPreciousWeight.setText(comboCurrency.getSelectedItem().toString());
-                labelCurrencyBaseWeight.setText(comboCurrency.getSelectedItem().toString());
-                // after reload if this following values doesn't exixt in fOps then 1st item in the following lists get selected
-                // this situation occurs at first run when rjcb1 and rjcb2 returns null selected items. And when AddRemoveBox is open and we remove the selected item in rjcb1/rjcb2 from the add remove list.
-                tmp = (String)comboPreciousWeightUnit.getSelectedItem();
-                if(fOps.getValue("*"+tmp, "NONE").equals("NONE") && fOps.getValue("_"+tmp, "NONE").equals("NONE")) // if this condition satisfies, it also means tmp=null
-                {
-                    comboPreciousWeightUnit.setSelectedIndex(weightList.isEmpty()?-1:0);
-                }
-                tmp = (String)comboBaseWeightUnit.getSelectedItem();
-                if(fOps.getValue("*"+tmp, "NONE").equals("NONE") && fOps.getValue("_"+tmp, "NONE").equals("NONE")) // if this condition satisfies, it also means tmp=null
-                {
-                    comboBaseWeightUnit.setSelectedIndex(weightList.isEmpty()?-1:0);
-                }
 	}
 	
         
@@ -523,6 +457,7 @@ public class AddRemoveBox extends JDialog
 			else
 			{
 				CheckableItem tmp=(CheckableItem)unitEditableList.getSelectedValue();
+				if(!allowedToDrop(tmp.toString())) return;
 				fOps.removeValue(tmp.fullName());
 				reload();
 //				tmp=null;
@@ -530,15 +465,11 @@ public class AddRemoveBox extends JDialog
 		}
 		else if(actionCommand.equals("ALL_SAVE"))
 		{
-                        if(rbRateBar.isSelected() || rbBoth.isSelected()) // this code for setting rateauto, punit, $punitspercurrency, bunit and $bunitspercurrency if rate bar is activated
+                        if(rbRateBar.isSelected() || rbBoth.isSelected()) // this code for setting rateauto if rate bar is activated
                         {
                             if(comboAutoFetchMinutes.isEnabled()) fOps.setValue("$rateauto", (String)comboAutoFetchMinutes.getSelectedItem());
                             else fOps.setValue("$rateauto", "0");
 
-                            fOps.setValue("$punit", (String)comboPreciousWeightUnit.getSelectedItem());
-                            fOps.setValue("$punitspercurrency", (numPreciousWeight.getText().equals("") || numPreciousWeight.getText().equals("0")) ? "1" : numPreciousWeight.getText());
-                            fOps.setValue("$bunit", (String)comboBaseWeightUnit.getSelectedItem());
-                            fOps.setValue("$bunitspercurrency", (numBaseWeight.getText().equals("") || numBaseWeight.getText().equals("0")) ? "1" : numBaseWeight.getText());
                         }
                         if(rbCalculator.isSelected() || rbBoth.isSelected()) // this code for setting numrows if calculator is activated
                         {
@@ -556,9 +487,8 @@ public class AddRemoveBox extends JDialog
 		}
                 else if(actionCommand.equals("CURR_CHANGED"))
                 {
-                    labelCurrencyPreciousWeight.setText(comboCurrency.getSelectedItem().toString());
-                    labelCurrencyBaseWeight.setText(comboCurrency.getSelectedItem().toString());
                     fOps.setValue("$currency", (String)comboCurrency.getSelectedItem());
+                    labelRateUnits.setText(CustomizeRatesDialog.summary(marketSettings));
                 }
                 else if(actionCommand.equals("RATE_BAR_AUTO"))
                 {
@@ -576,27 +506,12 @@ public class AddRemoveBox extends JDialog
                     fOps.setValue("$clickcondition", rbRateBarClickPolicy1.isSelected()?"1":"2");
                     labelClicks.setText(rbRateBarClickPolicy1.isSelected()?"right click":"left click");
                 }
-                else if(actionCommand.equals("WEIGHT_COMBO_CLICK") && ready)
+                else if(actionCommand.equals("CUSTOMIZE_RATES"))
                 {
-                    String sel1 = comboPreciousWeightUnit.getSelectedItem().toString();
-                    String sel2 = comboBaseWeightUnit.getSelectedItem().toString();
-                    for(int var=0; var < unitEditableList.getModel().getSize(); var++)
+                    if(CustomizeRatesDialog.show(thisone, fOps, marketSettings, rateService))
                     {
-                        CheckableItem curElem = (CheckableItem)unitEditableList.getModel().getElementAt(var);
-                        if(sel1.equals(curElem.toString()) && !curElem.isSelected() )
-                        {
-                            JOptionPane.showMessageDialog(thisone,curElem.toString()+" unit is not checked in the unit list. Please check enable it first.","Selection Error",JOptionPane.INFORMATION_MESSAGE);
-                            String tmp=fOps.getValue("$punit", "NONE"); // this and following lines for selecting punit and bunit combo boxes
-                            if(tmp.equals("NONE")) comboPreciousWeightUnit.setSelectedIndex(comboPreciousWeightUnit.getSelectedIndex()==-1 ? (weightList.isEmpty()?-1:0) : comboPreciousWeightUnit.getSelectedIndex());
-                            else comboPreciousWeightUnit.setSelectedItem((fOps.getValue("*"+tmp, "NONE").equals("NONE") && fOps.getValue("_"+tmp, "NONE").equals("NONE")) ? comboPreciousWeightUnit.getItemAt(0) : tmp);
-                        }
-                        else if(sel2.equals(curElem.toString()) && !curElem.isSelected())
-                        {
-                            JOptionPane.showMessageDialog(thisone,curElem.toString()+" unit is not checked in the unit list. Please check enable it first.","Selection Error",JOptionPane.INFORMATION_MESSAGE);
-                            String tmp=fOps.getValue("$bunit", "NONE");
-                            if(tmp.equals("NONE")) comboBaseWeightUnit.setSelectedIndex(comboBaseWeightUnit.getSelectedIndex()==-1 ? (weightList.isEmpty()?-1:0) : comboBaseWeightUnit.getSelectedIndex());
-                            else comboBaseWeightUnit.setSelectedItem((fOps.getValue("*"+tmp, "NONE").equals("NONE") && fOps.getValue("_"+tmp, "NONE").equals("NONE")) ? comboBaseWeightUnit.getItemAt(0) : tmp);
-                        }
+                        labelRateUnits.setText(CustomizeRatesDialog.summary(marketSettings));
+                        reload(); // units may have been added to the unit list
                     }
                 }
 	}
@@ -620,10 +535,6 @@ public class AddRemoveBox extends JDialog
                     Rectangle cell = index < 0 ? null : unitEditableList.getCellBounds(index, index);
                     if(cell != null && cell.contains(me.getPoint())) buttonEdit.doClick();
                 }
-            }
-            else if(src.equals(labelCurrencyPreciousWeight) || src.equals(labelCurrencyBaseWeight))
-            {
-                comboCurrency.showPopup();
             }
 	}
     }

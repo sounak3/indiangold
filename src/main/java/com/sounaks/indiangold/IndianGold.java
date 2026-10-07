@@ -24,6 +24,10 @@ package com.sounaks.indiangold;
  * @author Sounak Choudhury
  */
 import com.sounaks.indiangold.RateBar.RateLabel;
+import com.sounaks.indiangold.rates.HttpFetcher;
+import com.sounaks.indiangold.rates.ProviderRegistry;
+import com.sounaks.indiangold.rates.RateService;
+import com.sounaks.indiangold.rates.RateStore;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
@@ -62,6 +66,9 @@ public class IndianGold extends JFrame
     JButton abtButton, setButton, taxButton, rateBarButton, ok1, ok2;
     JScrollPane spane;
     RateBar ratePane;
+    MarketSettings marketSettings;
+    RateService rateService;
+    private final boolean existingUser;
     Currency currency;
     ShowHideAdapter shAdapter;
     CardAdapter cAdapter;
@@ -343,11 +350,9 @@ public class IndianGold extends JFrame
             shAdapter=new ShowHideAdapter(); // clickcondition settings also may have changed
             ratePane.addMouseListener(shAdapter);
             ratePane.setVisible(true);
-            ratePane.updateMetalUnitLabels();
-            ratePane.updateMetalRates(Double.valueOf(fOps.getValue("$convfactor", "1D"))); // this will also save the above value since it saves metal rates.
+            ratePane.rebuild();
             ratePane.setBorder(fOps.getValue("$calculator", "1").equals("1")?BorderFactory.createEtchedBorder():BorderFactory.createRaisedBevelBorder());
-            ratePane.updateToolTips();
-            pack(); // this and above code is here as without the ratebar showing, updateMetalRates method is of no use
+            pack();
             if(fOps.getValue("$clickcondition", "1").equals("1"))
             {
                 p12.setToolTipText("Click on a rate on the rate list to update here");
@@ -376,30 +381,27 @@ public class IndianGold extends JFrame
     }
     
     void settingsProc() {
-        box = new AddRemoveBox(this, fOps);
+        box = new AddRemoveBox(this, fOps, marketSettings, rateService);
         box.setVisible(true);
         resetUIData();
-        ratePane.setSchedule(Integer.valueOf(fOps.getValue("$rateauto", "2")));
+        ratePane.rebuild();
+        rateService.refreshNow(false); // sources may have been switched on; each source's minimum interval still applies
     }
 
+    /**
+     * Copies a rate from the rate bar into the calculator, with the quantity and unit it is for.
+     * @param label The clicked row; the header row and rows without a price are ignored.
+     */
     void updateRate(RateLabel label) {
-        if(!ratePane.fetchRatesInProgress) {
-            if(RateBar.PRECIOUS_METALS_STRING.contains(label.getName()) || RateBar.BASE_METALS_STRING.contains(label.getName()))
-                rateField.setText(label.getRate());
-            if(RateBar.PRECIOUS_METALS_STRING.contains(label.getName().toLowerCase()))
-            {
-                noOfUnitsField.setText(fOps.getValue("$punitspercurrency", "1"));
-                weightUnitCombo2.setSelectedItem(fOps.getValue("$punit", (String)weightUnitCombo2.getSelectedItem()));
-            }
-            else if(RateBar.BASE_METALS_STRING.contains(label.getName().toLowerCase()))
-            {
-                noOfUnitsField.setText(fOps.getValue("$bunitspercurrency", "1"));
-                weightUnitCombo2.setSelectedItem(fOps.getValue("$bunit", (String)weightUnitCombo2.getSelectedItem()));
-            }
-            String unit=(String) weightUnitCombo2.getSelectedItem();
-            if(unit.contains("(") && unit.contains(")") && unit.indexOf("(") < unit.indexOf(")"))
-                labelWeightUnit.setText(unit.substring(unit.indexOf("(")+1, unit.indexOf(")")));
-        }
+        if(label.metal() == null || label.getRate() == null) return;
+        rateField.setText(label.getRate());
+        MarketSettings.DisplayUnit unit = label.unit();
+        double qty = unit.quantity();
+        noOfUnitsField.setText(qty == Math.rint(qty) ? String.valueOf((long)qty) : String.valueOf(qty));
+        if(weightList.contains(unit.name())) weightUnitCombo2.setSelectedItem(unit.name());
+        String selected = (String) weightUnitCombo2.getSelectedItem();
+        if(selected != null && selected.contains("(") && selected.contains(")") && selected.indexOf("(") < selected.indexOf(")"))
+            labelWeightUnit.setText(selected.substring(selected.indexOf("(")+1, selected.indexOf(")")));
     }
 
     /**
@@ -532,6 +534,10 @@ public class IndianGold extends JFrame
     {
         super(NAME_STRING_FULL);
         fOps=new FileOperations(new File("units.dat"),NAME_STRING_MEDIUM);
+        // Settings of an earlier version: the user's own file, or a units.dat saved next to the jar.
+        existingUser = fOps.loadedFrom() != FileOperations.Source.BUNDLED && fOps.loadedFrom() != FileOperations.Source.BUILT_IN_DEFAULTS;
+        marketSettings = new MarketSettings(fOps);
+        rateService = createRateService();
         weightList=new Vector<String>(); //fOps.getCheckedUnitNames();
         mgValue=new Vector<String>(); //fOps.getCheckedUnitValues();
         shAdapter=new ShowHideAdapter();
@@ -755,7 +761,7 @@ public class IndianGold extends JFrame
         for(JTextField component : fields) { // Apply standard height on all textfields
             component.setPreferredSize(new Dimension(component.getPreferredSize().width, requiredTFheight));
         }
-        ratePane = new RateBar(fOps, (fOps.getValue("$calculator", "1").equals("1")?BorderFactory.createEtchedBorder():BorderFactory.createRaisedBevelBorder()));
+        ratePane = new RateBar(rateService, marketSettings, fOps, (fOps.getValue("$calculator", "1").equals("1")?BorderFactory.createEtchedBorder():BorderFactory.createRaisedBevelBorder()));
 
         init();
         resetUIData();
@@ -849,18 +855,93 @@ public class IndianGold extends JFrame
         }
     }
     
+    /**
+     * Sets up the market rate sources. Prices that versions before 5.0 kept in units.dat move to rates.properties.
+     * @return The rate service; it starts fetching when {@link #startRates()} is called.
+     */
+    private RateService createRateService()
+    {
+        java.nio.file.Path dataDir = FileOperations.getDataDir().toPath();
+        ProviderRegistry registry = ProviderRegistry.load(dataDir);
+        registry.problems().forEach(problem -> System.out.println("Rate source not loaded: " + problem));
+        RateStore store = RateStore.open(dataDir);
+        if(store.isEmpty() && existingUser && !fOps.getAllMetalNames().isEmpty())
+        {
+            store.importLegacy(fOps.getAllProperties());
+            try
+            {
+                store.save();
+                for(String key : new java.util.ArrayList<>(fOps.getAllMetalNames())) fOps.removeValue(key);
+                fOps.removeValue("$ratetime");
+                fOps.removeValue("$convfactor");
+                fOps.saveToFile();
+            }
+            catch(IOException e)
+            {
+                System.out.println("Cannot save the market rates: " + e);
+            }
+        }
+        java.time.Clock clock = java.time.Clock.systemDefaultZone();
+        HttpFetcher http = new HttpFetcher("IndianGold/" + VERSION + " (+https://github.com/sounak3/indiangold)", java.time.Duration.ofSeconds(15), clock);
+        return new RateService(registry, store, marketSettings, http, clock);
+    }
+
+    /**
+     * Asks for the country at first start (and once after updating from an older version), then starts fetching rates.
+     */
+    void startRates()
+    {
+        if(marketSettings.country().isEmpty())
+        {
+            CountryDefaults countries = CountryDefaults.load();
+            CountryDialog.ask(this, countries, CountryDefaults.systemCountry(), existingUser).ifPresent(choice -> {
+                if(choice.applyDefaults()) marketSettings.applyCountry(countries.forCountry(choice.country()));
+                else fOps.setValue("$country", choice.country());
+                boolean useCountryUnits = choice.applyDefaults();
+                if(choice.webSources()) marketSettings.acceptWebDisclaimer();
+                else
+                {
+                    java.util.List<RateService.SourceChoice> sources = new java.util.ArrayList<>();
+                    for(RateService.SourceChoice source : marketSettings.sources())
+                    {
+                        boolean web = rateService.registry().find(source.id()).map(e -> e.provider().isWebPage()).orElse(false);
+                        sources.add(web ? new RateService.SourceChoice(source.id(), false) : source);
+                    }
+                    marketSettings.setSources(sources);
+                }
+                fOps.saveToFile();
+                resetUIData();
+                if(useCountryUnits) useGoldUnitInCalculator();
+                pack();
+            });
+        }
+        rateService.start();
+    }
+
+    /**
+     * Starts the calculator in the country's gold unit, e.g. weight in grams and the rate per 10 g in India.
+     */
+    private void useGoldUnitInCalculator()
+    {
+        MarketSettings.DisplayUnit gold = marketSettings.unit(com.sounaks.indiangold.rates.Metal.Group.GOLD);
+        if(!weightList.contains(gold.name())) return;
+        weightUnitCombo1.setSelectedItem(gold.name());
+        weightUnitCombo2.setSelectedItem(gold.name());
+        double qty = gold.quantity();
+        noOfUnitsField.setText(qty == Math.rint(qty) ? String.valueOf((long)qty) : String.valueOf(qty));
+        labelWeightUnit.setText(gold.shortName());
+    }
+
     private class ShowHideAdapter extends ClickCountAdapter
     {
-        boolean doubleClickForShowHide, manualRefreshRates;
+        boolean doubleClickForShowHide;
 
         public ShowHideAdapter() 
         {
             doubleClickForShowHide=fOps.getValue("$clickcondition", "1").equals("1");
             // true = Single click to fill the rate. Double click for show/hide calculator.
             // false = Double click to fill the rate. Right click for show/hide calculator.
-            
-            manualRefreshRates=fOps.getValue("$rateauto", "0").equals("0");
-            // true = Manual refresh enabled.
+
         }
 
         @Override
@@ -870,7 +951,7 @@ public class IndianGold extends JFrame
             {
                 if(doubleClickForShowHide) // right single click for clickCondition=1, refresh the rate
                 {
-                    if(manualRefreshRates) ratePane.fetchRates();
+                    ratePane.refreshNow(IndianGold.this);
                 }
                 else // right single click for clickCondition=2, show/hide calculator
                 {
@@ -887,7 +968,7 @@ public class IndianGold extends JFrame
                 }
                 else // left single click for clickCondition=2, refresh the rate
                 {
-                    if(manualRefreshRates) ratePane.fetchRates();
+                    ratePane.refreshNow(IndianGold.this);
                 }
             }
         }
@@ -943,6 +1024,7 @@ public class IndianGold extends JFrame
             mm.setLocation(loc.width,loc.height);
             mm.setResizable(false);
             mm.setVisible(true);
+            mm.startRates();
         });
     }
 }

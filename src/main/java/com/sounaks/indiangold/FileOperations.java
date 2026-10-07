@@ -30,7 +30,14 @@ class FileOperations
 	static final String DATA_DIR_NAME = ".indiangold";
 	static File jarDir; // Folder of the running jar; tests point it at a temp folder.
 
+	/** Where the settings were loaded from at start. */
+	enum Source
+	{
+		USER_FILE, BACKUP, NEXT_TO_JAR, BUNDLED, BUILT_IN_DEFAULTS
+	}
+
 	private Properties props, tmpProps;
+	private Source loadedFrom = Source.BUILT_IN_DEFAULTS;
 	private final String fileName;
 	private final File userFile;
 	private final String header;
@@ -110,8 +117,10 @@ class FileOperations
 		Properties loaded = null;
 		File jarFolder = getJarDir();
 		File[] candidates = { userFile, backupOf(userFile), jarFolder == null ? null : new File(jarFolder, fileName) };
-		for(File candidate : candidates)
+		Source[] sources = { Source.USER_FILE, Source.BACKUP, Source.NEXT_TO_JAR };
+		for(int i = 0; i < candidates.length; i++)
 		{
+			File candidate = candidates[i];
 			if(candidate == null || !candidate.isFile()) continue;
 			try(InputStream in = new BufferedInputStream(new FileInputStream(candidate)))
 			{
@@ -121,13 +130,18 @@ class FileOperations
 			{
 				System.out.println("Cannot read " + candidate + ": " + e);
 			}
-			if(loaded != null) break;
+			if(loaded != null)
+			{
+				loadedFrom = sources[i];
+				break;
+			}
 		}
 		if(loaded == null)
 		{
 			try(InputStream in = FileOperations.class.getResourceAsStream("/" + fileName))
 			{
 				if(in != null) loaded = readUsable(in, "bundled " + fileName);
+				if(loaded != null) loadedFrom = Source.BUNDLED;
 			}
 			catch(IOException e)
 			{
@@ -181,6 +195,15 @@ class FileOperations
 		loadData();
 		tmpProps.clear();
 		modify = false;
+	}
+
+        /**
+         * Tells where the settings came from, e.g. to recognize a user of an earlier version.
+         * @return The source the settings were loaded from at start.
+         */
+	Source loadedFrom()
+	{
+		return loadedFrom;
 	}
 
         /**

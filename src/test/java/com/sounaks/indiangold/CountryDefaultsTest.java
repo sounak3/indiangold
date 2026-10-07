@@ -109,6 +109,22 @@ class CountryDefaultsTest
 	}
 
 	@Test
+	void unitsUsedForRatesAreRecognized()
+	{
+		FileOperations ops = new FileOperations(new File("units.dat"), "test");
+		MarketSettings settings = new MarketSettings(ops);
+		settings.applyCountry(countries.forCountry("IN"));
+
+		assertEquals("gold", settings.groupUsing("gram (g)"));
+		assertEquals("silver", settings.groupUsing("Kilogram (kg)"));
+		assertNull(settings.groupUsing("ratti (rt)"));
+
+		settings.setUnit(Metal.Group.GOLD, "tola (bhori / standard tola)", 1);
+		assertEquals("platinum and palladium", settings.groupUsing("gram (g)"), "gold moved to tola; platinum still uses grams");
+		assertEquals(11.6638, settings.unit(Metal.Group.GOLD).totalGrams(), 1e-3);
+	}
+
+	@Test
 	void oldUnitSettingsCarryOverToEveryMetalGroup()
 	{
 		FileOperations ops = new FileOperations(new File("units.dat"), "test");

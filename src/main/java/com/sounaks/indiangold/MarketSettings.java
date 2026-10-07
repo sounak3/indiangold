@@ -195,6 +195,27 @@ final class MarketSettings implements RateService.Settings
 		return new DisplayUnit(name, quantity > 0 ? quantity : 1, grams);
 	}
 
+	/**
+	 * Tells which metal group shows its rates in a unit.
+	 * @param unitName A unit name from the unit list.
+	 * @return A name for the group such as "gold", or null if no group uses the unit.
+	 */
+	String groupUsing(String unitName)
+	{
+		for(Metal.Group group : Metal.Group.values())
+		{
+			if(ops.getValue("$unit." + key(group), "").equalsIgnoreCase(unitName))
+				return switch(group)
+				{
+					case GOLD -> "gold";
+					case SILVER -> "silver";
+					case PLATINUM_GROUP -> "platinum and palladium";
+					case BASE -> "base metal";
+				};
+		}
+		return null;
+	}
+
 	void setUnit(Metal.Group group, String unitName, double quantity)
 	{
 		ops.setValue("$unit." + key(group), unitName);
