@@ -53,6 +53,8 @@ final class MarketRatesPanel extends JPanel
 	private static final long serialVersionUID = 1L;
 	private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("d MMM HH:mm");
 	private static final int[] INTERVALS = { 0, 5, 10, 15, 30, 60 };
+	/** The plug-in guide in the repository, docs/PLUGINS.md. */
+	static final java.net.URI PLUGIN_GUIDE = java.net.URI.create("https://github.com/sounak3/indiangold/blob/master/docs/PLUGINS.md");
 
 	private final JDialog owner;
 	private final transient MarketSettings settings;
@@ -93,26 +95,16 @@ final class MarketRatesPanel extends JPanel
 		up.addActionListener(e -> move(-1));
 		JButton down = new JButton("Move down");
 		down.addActionListener(e -> move(1));
-		JButton add = new JButton("New...");
-		add.setToolTipText("Add a source: a JSON API or a web page, described without programming");
-		add.addActionListener(e -> newDefinition(DefinitionEditorDialog.blank(), "New source"));
-		JButton duplicate = new JButton("Duplicate...");
-		duplicate.setToolTipText("Start a new source from the selected one");
-		duplicate.addActionListener(e -> duplicate());
-		JButton edit = new JButton("Edit...");
-		edit.addActionListener(e -> editSelected());
-		JButton delete = new JButton("Delete");
-		delete.addActionListener(e -> deleteSelected());
+		JButton reload = new JButton("Reload plug-ins");
+		reload.setToolTipText("Looks for new or changed plug-in jars in the plug-ins folder");
+		reload.addActionListener(e -> reloadSources());
 		JButton plugins = new JButton("Plug-ins folder...");
-		plugins.setToolTipText("<html>Java plug-ins (jar files) put in this folder are loaded at the next start.<br>They run as code on your computer: only use plug-ins you trust.</html>");
+		plugins.setToolTipText("<html>Rate sources can be added as plug-in jar files in this folder.<br>Plug-ins can run code on your computer: only use plug-ins you trust.</html>");
 		plugins.addActionListener(e -> openPluginsFolder());
-		JPanel order = new JPanel(new GridLayout(7, 1, 0, 4));
+		JPanel order = new JPanel(new GridLayout(4, 1, 0, 4));
 		order.add(up);
 		order.add(down);
-		order.add(add);
-		order.add(duplicate);
-		order.add(edit);
-		order.add(delete);
+		order.add(reload);
 		order.add(plugins);
 		JPanel orderHolder = new JPanel(new BorderLayout());
 		orderHolder.add(order, BorderLayout.NORTH);
@@ -161,7 +153,11 @@ final class MarketRatesPanel extends JPanel
 		units.add(customize, BorderLayout.EAST);
 		refreshSummary();
 
+		JPanel help = new JPanel(new FlowLayout(FlowLayout.LEADING, 0, 0));
+		help.add(new JLabel("Developers: "));
+		help.add(Links.button("How to write a plug-in", PLUGIN_GUIDE));
 		JPanel bottom = new JPanel(new BorderLayout());
+		bottom.add(help, BorderLayout.CENTER);
 		bottom.add(updates, BorderLayout.NORTH);
 		bottom.add(units, BorderLayout.SOUTH);
 		add(list, BorderLayout.NORTH);
@@ -186,6 +182,23 @@ final class MarketRatesPanel extends JPanel
 		return service.registry().find(sources.get(row).id()).orElseThrow().provider();
 	}
 
+	/**
+	 * Refreshes the source list without losing the selection (a full table refresh clears it, which left the details
+	 * area empty after Test). With nothing selected, the first source switched on is selected.
+	 */
+	private void refreshTable()
+	{
+		int row = table.getSelectedRow();
+		model.fireTableDataChanged();
+		for(int i = 0; row < 0 && i < sources.size(); i++) if(sources.get(i).enabled()) row = i;
+		if(row < 0 && !sources.isEmpty()) row = 0;
+		if(row >= 0 && row < sources.size())
+		{
+			table.setRowSelectionInterval(row, row); // also shows the details
+			table.scrollRectToVisible(table.getCellRect(row, 0, true));
+		}
+	}
+
 	private void move(int direction)
 	{
 		int row = table.getSelectedRow();
@@ -197,116 +210,30 @@ final class MarketRatesPanel extends JPanel
 		table.setRowSelectionInterval(target, target);
 	}
 
-	private Optional<ProviderRegistry.Entry> selectedEntry()
-	{
-		int row = table.getSelectedRow();
-		return row < 0 ? Optional.empty() : service.registry().find(sources.get(row).id());
-	}
-
-	private void duplicate()
-	{
-		Optional<ProviderRegistry.Entry> entry = selectedEntry();
-		if(entry.isEmpty()) return;
-		Optional<com.sounaks.indiangold.rates.ProviderDefinition> definition = entry.get().definition();
-		if(definition.isEmpty())
-		{
-			message(entry.get().provider().name() + " is written in Java, so it has no definition to copy.");
-			return;
-		}
-		java.util.Properties copy = definition.get().toProperties();
-		String id = copy.getProperty("id") + "-copy";
-		for(int i = 2; service.registry().find(id).isPresent(); i++) id = copy.getProperty("id") + "-copy" + i;
-		copy.setProperty("id", id);
-		copy.setProperty("name", copy.getProperty("name") + " (copy)");
-		newDefinition(copy, "Duplicate " + entry.get().provider().name());
-	}
-
-	private void newDefinition(java.util.Properties start, String title)
-	{
-		if(DefinitionEditorDialog.edit(owner, title, start, service, settings) == null) return;
-		reloadSources();
-		// the new source is the one the registry did not know before: the last user definition added
-		for(ProviderRegistry.Entry entry : service.registry().entries())
-		{
-			if(entry.origin() == ProviderRegistry.Origin.USER_DEFINITION && sources.stream().noneMatch(s -> s.id().equals(entry.provider().id())))
-			{
-				sources.add(new RateService.SourceChoice(entry.provider().id(), false));
-				int row = sources.size() - 1;
-				settings.setSources(sources);
-				model.fireTableDataChanged();
-				table.setRowSelectionInterval(row, row);
-				setEnabled(row, true);
-			}
-		}
-	}
-
-	private void editSelected()
-	{
-		Optional<ProviderRegistry.Entry> entry = selectedEntry();
-		if(entry.isEmpty()) return;
-		if(entry.get().origin() != ProviderRegistry.Origin.USER_DEFINITION)
-		{
-			message(entry.get().origin() == ProviderRegistry.Origin.PLUGIN || entry.get().definition().isEmpty()
-					? entry.get().provider().name() + " is written in Java and can't be edited here."
-					: entry.get().provider().name() + " is built in and can't be changed. Use \"Duplicate...\" to make your own version.");
-			return;
-		}
-		String oldId = entry.get().provider().id();
-		java.nio.file.Path saved = DefinitionEditorDialog.edit(owner, "Edit " + entry.get().provider().name(),
-				entry.get().definition().orElseThrow().toProperties(), service, settings);
-		if(saved == null) return;
-		String newId = saved.getFileName().toString().replaceFirst("\\.properties$", "");
-		if(!newId.equals(oldId))
-		{
-			try
-			{
-				service.registry().delete(oldId); // the id was changed: the old file would show up as a second source
-			}
-			catch(java.io.IOException | IllegalArgumentException e)
-			{
-				message("The old definition could not be removed: " + e.getMessage());
-			}
-			for(int i = 0; i < sources.size(); i++)
-				if(sources.get(i).id().equals(oldId)) sources.set(i, new RateService.SourceChoice(newId, sources.get(i).enabled()));
-			settings.setSources(sources);
-		}
-		reloadSources();
-	}
-
-	private void deleteSelected()
-	{
-		Optional<ProviderRegistry.Entry> entry = selectedEntry();
-		if(entry.isEmpty()) return;
-		if(entry.get().origin() != ProviderRegistry.Origin.USER_DEFINITION)
-		{
-			message("Only your own sources can be deleted. Built-in ones can be switched off instead.");
-			return;
-		}
-		String id = entry.get().provider().id();
-		if(JOptionPane.showConfirmDialog(owner, "Delete " + entry.get().provider().name() + "?", "Delete source", JOptionPane.OK_CANCEL_OPTION) != JOptionPane.OK_OPTION) return;
-		try
-		{
-			service.registry().delete(id);
-		}
-		catch(java.io.IOException | IllegalArgumentException e)
-		{
-			message("Cannot delete: " + e.getMessage());
-			return;
-		}
-		sources.removeIf(s -> s.id().equals(id));
-		settings.setSources(sources);
-		reloadSources();
-	}
-
 	private void reloadSources()
 	{
 		int row = table.getSelectedRow();
 		service.registry().reload();
 		service.registry().problems().forEach(problem -> System.out.println("Rate source not loaded: " + problem));
 		sources.removeIf(s -> service.registry().find(s.id()).isEmpty());
+		int added = 0;
+		for(ProviderRegistry.Entry entry : service.registry().entries())
+		{
+			if(sources.stream().noneMatch(s -> s.id().equals(entry.provider().id())))
+			{
+				sources.add(new RateService.SourceChoice(entry.provider().id(), false)); // new plug-ins start switched off
+				added++;
+			}
+		}
+		settings.setSources(sources);
 		model.fireTableDataChanged();
 		if(!sources.isEmpty()) table.setRowSelectionInterval(Math.min(Math.max(row, 0), sources.size() - 1), Math.min(Math.max(row, 0), sources.size() - 1));
 		showDetails();
+		List<String> problems = service.registry().problems();
+		if(added > 0 || !problems.isEmpty())
+			message("<html>" + (added == 0 ? "No new sources found." : added + " new source" + (added == 1 ? "" : "s") + " added, switched off; switch "
+					+ (added == 1 ? "it" : "them") + " on to use.") + (problems.isEmpty() ? "" : "<br><br><b>Not loaded:</b><br>"
+					+ String.join("<br>", problems.stream().map(RateBar::escape).toList())) + "</html>");
 	}
 
 	private void openPluginsFolder()
@@ -316,18 +243,15 @@ final class MarketRatesPanel extends JPanel
 		try
 		{
 			java.nio.file.Files.createDirectories(folder.get());
-			if(java.awt.Desktop.isDesktopSupported() && java.awt.Desktop.getDesktop().isSupported(java.awt.Desktop.Action.OPEN))
-			{
-				java.awt.Desktop.getDesktop().open(folder.get().toFile());
-				return;
-			}
 		}
-		catch(java.io.IOException | UnsupportedOperationException e)
+		catch(java.io.IOException e)
 		{
-			// show the path instead
+			message("Cannot create " + folder.get() + ": " + e.getMessage());
+			return;
 		}
-		message("<html>Put plug-in jar files in:<br><b>" + RateBar.escape(folder.get().toString()) + "</b><br>They are loaded at the next start.</html>");
+		Links.openFolder(owner, folder.get().toFile());
 	}
+
 
 	private void setEnabled(int row, boolean on)
 	{
@@ -349,10 +273,9 @@ final class MarketRatesPanel extends JPanel
 	{
 		RateProvider p = entry.provider();
 		if(p.isManual()) return "Manual";
-		if(entry.origin() == ProviderRegistry.Origin.PLUGIN) return "Plug-in";
-		if(p.isWebPage()) return "Web page";
-		if(p.needsApiKey()) return "API, your key";
-		return "API, free";
+		String kind = p.isWebPage() ? "web page" : p.needsApiKey() ? "API, your key" : "API, free";
+		if(entry.origin() == ProviderRegistry.Origin.PLUGIN) return "Plug-in, " + kind;
+		return Character.toUpperCase(kind.charAt(0)) + kind.substring(1);
 	}
 
 	private String status(RateService.SourceChoice choice)
@@ -389,9 +312,8 @@ final class MarketRatesPanel extends JPanel
 
 		JPanel links = new JPanel(new FlowLayout(FlowLayout.LEADING, 0, 0));
 		provider.termsPage().ifPresent(page -> links.add(Links.button("Terms of use", page)));
-		if(entry.origin() == ProviderRegistry.Origin.PLUGIN)
-			links.add(new JLabel("<html><font color=gray>Plug-in from the plugins folder; it runs as code on your computer.</font></html>"));
-		entry.file().ifPresent(file -> links.add(new JLabel("<html><font color=gray>Your definition: " + RateBar.escape(file.toString()) + "</font></html>")));
+		entry.file().ifPresent(jar -> links.add(new JLabel("<html><font color=gray>&nbsp;&nbsp;Plug-in " + RateBar.escape(jar.getFileName().toString())
+				+ " (plug-ins can run code on your computer)</font></html>")));
 		if(links.getComponentCount() > 0) lines.add(links);
 
 		if(provider.isWebPage())
@@ -540,10 +462,12 @@ final class MarketRatesPanel extends JPanel
 		task.whenComplete((result, failure) -> SwingUtilities.invokeLater(() -> {
 			button.setEnabled(true);
 			owner.setCursor(Cursor.getDefaultCursor());
-			model.fireTableDataChanged();
+			refreshTable();
 			if(failure == null)
 			{
 				onSuccess.accept(result);
+				refreshTable();
+				table.requestFocusInWindow();
 				return;
 			}
 			Throwable cause = failure instanceof CompletionException && failure.getCause() != null ? failure.getCause() : failure;
@@ -557,7 +481,8 @@ final class MarketRatesPanel extends JPanel
 				case CONFIGURATION -> "";
 			} : "";
 			JOptionPane.showMessageDialog(owner, cause.getMessage() + hint, "Problem", JOptionPane.WARNING_MESSAGE);
-			showDetails();
+			refreshTable();
+			table.requestFocusInWindow();
 		}));
 	}
 

@@ -25,7 +25,6 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.JList;
-import javax.swing.table.DefaultTableCellRenderer;
 
 /**
  * How units and price dates are shown to the user.
@@ -49,18 +48,6 @@ final class UnitDisplay
 		public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean selected, boolean focus)
 		{
 			return super.getListCellRendererComponent(list, value instanceof MassUnit unit ? MarketSettings.unitName(unit) : value, index, selected, focus);
-		}
-	}
-
-	/** The same for table cells. */
-	static final class TableRenderer extends DefaultTableCellRenderer
-	{
-		private static final long serialVersionUID = 1L;
-
-		@Override
-		protected void setValue(Object value)
-		{
-			super.setValue(value instanceof MassUnit unit ? MarketSettings.unitName(unit) : value);
 		}
 	}
 

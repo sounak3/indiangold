@@ -50,7 +50,8 @@ Prices come from sources you can switch on, off and reorder in Settings > Market
     account at metals.dev, then paste the key. IndianGold updates it at times you choose (twice a day by default)
     and tells you how many updates are left before using one by hand.
   - Manual entry: type in prices yourself, for example from your jeweller, with their date.
-You can add more sources without programming (Settings > Market rates > New...), or as Java plug-ins.
+More sources can be added as plug-ins: put the plug-in's .jar file in the plug-ins folder (Settings > Market rates >
+Plug-ins folder...) and press "Reload plug-ins". Developers: see docs/PLUGINS.md ("How to write a plug-in" in the app).
 Prices are for pure metal; jewellers add premiums, making charges and taxes.
 
 _____________________________________________________

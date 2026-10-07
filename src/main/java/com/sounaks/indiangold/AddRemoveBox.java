@@ -183,17 +183,7 @@ public class AddRemoveBox extends JDialog
                 clicks.add(rbRateBarClickPolicy1);
                 clicks.add(rbRateBarClickPolicy2);
 
-                JPanel general = new JPanel();
-                general.setLayout(new BoxLayout(general, BoxLayout.PAGE_AXIS));
-                general.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
-                for(JComponent part : new JComponent[] { place, p2, clicks })
-                {
-                    part.setAlignmentX(LEFT_ALIGNMENT);
-                    general.add(part);
-                    general.add(Box.createVerticalStrut(6));
-                }
-
-                // Units & calculator tab: the weight unit list and the conversion table settings.
+                // One tab for units and the calculator: the unit list on the left, everything else on the right.
                 JPanel rp3=new JPanel();
                 rp3.setLayout(new BoxLayout(rp3, BoxLayout.PAGE_AXIS));
                 JPanel rp31=new JPanel();
@@ -223,16 +213,22 @@ public class AddRemoveBox extends JDialog
                                   "IndianGold Calculator",
                                   TitledBorder.TRAILING,
                                   TitledBorder.DEFAULT_POSITION));
+                JPanel options = new JPanel();
+                options.setLayout(new BoxLayout(options, BoxLayout.PAGE_AXIS));
+                for(JComponent part : new JComponent[] { place, p2, clicks, rp3 })
+                {
+                    part.setAlignmentX(LEFT_ALIGNMENT);
+                    part.setMaximumSize(new Dimension(Integer.MAX_VALUE, part.getPreferredSize().height));
+                    options.add(part);
+                    options.add(Box.createVerticalStrut(6));
+                }
                 JPanel unitsTab = new JPanel(new BorderLayout(6, 6));
                 unitsTab.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
                 unitsTab.add(leftPane, BorderLayout.CENTER);
-                unitsTab.add(rp3, BorderLayout.SOUTH);
+                unitsTab.add(options, BorderLayout.EAST);
 
                 JTabbedPane tabs = new JTabbedPane();
-                JPanel generalHolder = new JPanel(new BorderLayout()); // keeps the parts at their natural height
-                generalHolder.add(general, BorderLayout.NORTH);
-                tabs.addTab("General", generalHolder);
-                tabs.addTab("Units & calculator", unitsTab);
+                tabs.addTab("Units & Calculator", unitsTab);
                 tabs.addTab("Market rates", marketPanel);
                 JPanel bottomPane=new JPanel();
                 bottomPane.setLayout(new FlowLayout(FlowLayout.TRAILING));

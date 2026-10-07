@@ -2,8 +2,6 @@ package com.sounaks.indiangold.rates;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -21,7 +19,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 /** Scheduling, quota budget, choosing between sources, and loading providers. */
 class RateServiceTest
@@ -346,60 +343,6 @@ class RateServiceTest
 		assertEquals(4.2455 / 453.59237, rates.quotes().get(Metal.COPPER).pricePerGram(), 1e-12, "base metals were per pound");
 		assertEquals(74.283006, rates.fx().fromUsd(1, "INR"), 1e-9);
 		assertEquals(2, rates.quotes().size(), "rhodium is gone");
-	}
-
-	@Test
-	void registryLoadsUserDefinitionsAndExplainsBadOnes(@TempDir Path dataDir) throws Exception
-	{
-		Path folder = Files.createDirectories(dataDir.resolve("providers"));
-		Files.writeString(folder.resolve("my-shop.properties"), "id=my-shop\nname=My shop\ntype=web-page\nurl=https://shop.test/rates\nmetal.gold.select=#gold\nmetal.gold.unit=g\nmetal.gold.per=10\ncurrency=INR\n");
-		Files.writeString(folder.resolve("broken.properties"), "id=broken\ntype=json-api\n");
-		Files.writeString(folder.resolve("clash.properties"), "id=gold-api\nname=Mine\ntype=json-api\nurl=https://x.test/\nmetal.gold.path=/g\n");
-
-		ProviderRegistry registry = ProviderRegistry.load(dataDir);
-
-		assertEquals(ProviderRegistry.Origin.USER_DEFINITION, registry.find("my-shop").orElseThrow().origin());
-		assertTrue(registry.find("my-shop").orElseThrow().provider().isWebPage());
-		assertEquals(ProviderRegistry.Origin.BUILT_IN, registry.find("manual").orElseThrow().origin(), "Java providers come from ServiceLoader");
-		assertEquals(List.of("gold-api", "westmetall", "currency-api", "metals-dev", "manual"),
-				registry.entries().stream().filter(e -> e.origin() == ProviderRegistry.Origin.BUILT_IN).map(e -> e.provider().id()).toList());
-		String problems = String.join("\n", registry.problems());
-		assertTrue(problems.contains("broken.properties: name is missing"), problems);
-		assertTrue(problems.contains("\"gold-api\" is already used"), problems);
-	}
-
-	@Test
-	void userDefinitionsCanBeSavedAndDeletedButBuiltInsCannot(@TempDir Path dataDir) throws Exception
-	{
-		ProviderRegistry registry = ProviderRegistry.load(dataDir);
-		Properties copy = registry.find("westmetall").orElseThrow().definition().orElseThrow().toProperties();
-		copy.setProperty("id", "westmetall-copy");
-
-		Path file = registry.save(ProviderDefinition.of(copy));
-		assertTrue(Files.isRegularFile(file));
-		ProviderRegistry reloaded = ProviderRegistry.load(dataDir);
-		assertTrue(reloaded.find("westmetall-copy").isPresent());
-
-		assertThrows(IllegalArgumentException.class, () -> reloaded.save(registry.find("westmetall").orElseThrow().definition().orElseThrow()));
-		assertThrows(IllegalArgumentException.class, () -> reloaded.delete("westmetall"));
-		reloaded.delete("westmetall-copy");
-		assertTrue(ProviderRegistry.load(dataDir).find("westmetall-copy").isEmpty());
-	}
-
-	@Test
-	void reloadingPicksUpNewDefinitionsAndKeepsRegisteredProviders(@TempDir Path dataDir) throws Exception
-	{
-		ProviderRegistry registry = ProviderRegistry.load(dataDir);
-		FakeProvider registered = new FakeProvider("registered", 0, Duration.ofMinutes(1));
-		registry.register(registered);
-		Path folder = Files.createDirectories(dataDir.resolve("providers"));
-		Files.writeString(folder.resolve("later.properties"), "id=later\nname=Later\ntype=json-api\nurl=https://x.test/\nmetal.gold.path=/g\n");
-
-		registry.reload();
-
-		assertTrue(registry.find("later").isPresent());
-		assertTrue(registry.find("registered").isPresent());
-		assertEquals(dataDir.resolve("plugins"), registry.pluginsFolder().orElseThrow());
 	}
 
 	@Test

@@ -28,6 +28,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,28 +36,35 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
+import java.util.Set;
 
 /**
- * All rate providers the app knows: definitions built into the jar, Java providers registered with ServiceLoader,
- * the user's own definition files in ~/.indiangold/providers/ and plug-in jars in ~/.indiangold/plugins/.
+ * All rate providers the app knows: the ones built into the app (definition files listed in /providers/index.list and
+ * Java providers registered with ServiceLoader) and plug-ins, which are jar files in ~/.indiangold/plugins/.
+ * <p>
+ * A plug-in jar may contain Java providers (classes implementing {@link RateProvider}, listed in
+ * META-INF/services/com.sounaks.indiangold.rates.RateProvider) and definition files (listed, one resource path per
+ * line, in {@value #PLUGIN_DEFINITIONS}). See docs/PLUGINS.md.
  * @author Sounak Choudhury
  */
 public final class ProviderRegistry
 {
-	public static final String PROVIDERS_FOLDER = "providers";
 	public static final String PLUGINS_FOLDER = "plugins";
+	/** The list of definition files inside a plug-in jar. */
+	public static final String PLUGIN_DEFINITIONS = "META-INF/indiangold/providers.list";
 
-	/** Where a provider comes from; built-in ones can be duplicated but not changed. */
+	/** Where a provider comes from. */
 	public enum Origin
 	{
-		BUILT_IN, USER_DEFINITION, PLUGIN
+		BUILT_IN, PLUGIN
 	}
 
 	/**
 	 * A known provider.
 	 * @param provider The provider.
 	 * @param origin Where it comes from.
-	 * @param file The user's definition file, for USER_DEFINITION.
+	 * @param file The plug-in jar it came from, for plug-ins.
+	 * @param registered Whether it was added in code with {@link #register(RateProvider)}.
 	 */
 	public record Entry(RateProvider provider, Origin origin, Optional<Path> file, boolean registered)
 	{
@@ -95,8 +103,8 @@ public final class ProviderRegistry
 	}
 
 	/**
-	 * Loads every provider again, e.g. after the user saved or deleted a definition. Providers added with
-	 * {@link #register(RateProvider)} are kept.
+	 * Loads every provider again, e.g. after the user put a new plug-in into the plugins folder. Providers added
+	 * with {@link #register(RateProvider)} are kept.
 	 */
 	public synchronized void reload()
 	{
@@ -104,12 +112,8 @@ public final class ProviderRegistry
 		entries.forEach((id, entry) -> { if(entry.registered()) registered.put(id, entry); });
 		ProviderRegistry fresh = new ProviderRegistry(dataDir);
 		fresh.loadBuiltInDefinitions();
-		fresh.loadServices(ProviderRegistry.class.getClassLoader(), Origin.BUILT_IN);
-		if(dataDir != null)
-		{
-			fresh.loadUserDefinitions(dataDir.resolve(PROVIDERS_FOLDER));
-			fresh.loadPlugins(dataDir.resolve(PLUGINS_FOLDER));
-		}
+		Set<String> builtInClasses = fresh.loadServices(ProviderRegistry.class.getClassLoader(), Origin.BUILT_IN, null, Set.of());
+		if(dataDir != null) fresh.loadPlugins(dataDir.resolve(PLUGINS_FOLDER), builtInClasses);
 		registered.forEach((id, entry) -> fresh.addEntry(entry, "registered"));
 		entries = fresh.entries;
 		problems = fresh.problems;
@@ -123,21 +127,18 @@ public final class ProviderRegistry
 
 	private void loadBuiltInDefinitions()
 	{
-		try(InputStream index = ProviderRegistry.class.getResourceAsStream("/" + PROVIDERS_FOLDER + "/index.list"))
+		try(InputStream index = ProviderRegistry.class.getResourceAsStream("/providers/index.list"))
 		{
 			if(index == null) return;
-			BufferedReader reader = new BufferedReader(new InputStreamReader(index, StandardCharsets.UTF_8));
-			for(String line; (line = reader.readLine()) != null;)
+			for(String name : lines(index))
 			{
-				String name = line.trim();
-				if(name.isEmpty() || name.startsWith("#")) continue;
-				Properties properties = new Properties();
-				try(InputStream in = ProviderRegistry.class.getResourceAsStream("/" + PROVIDERS_FOLDER + "/" + name))
+				try(InputStream in = ProviderRegistry.class.getResourceAsStream("/providers/" + name))
 				{
 					if(in == null) { problems.add("Built-in definition " + name + " is missing."); continue; }
+					Properties properties = new Properties();
 					properties.load(in);
+					add(ProviderDefinition.of(properties), Origin.BUILT_IN, null, name);
 				}
-				add(ProviderDefinition.of(properties), Origin.BUILT_IN, null, name);
 			}
 		}
 		catch(IOException e)
@@ -146,78 +147,96 @@ public final class ProviderRegistry
 		}
 	}
 
-	private void loadUserDefinitions(Path folder)
+	private void loadPlugins(Path folder, Set<String> builtInClasses)
 	{
 		if(!Files.isDirectory(folder)) return;
-		try(DirectoryStream<Path> files = Files.newDirectoryStream(folder, "*.properties"))
-		{
-			List<Path> sorted = new ArrayList<>();
-			files.forEach(sorted::add);
-			Collections.sort(sorted);
-			for(Path file : sorted)
-			{
-				Optional<Properties> properties = SafeFiles.readProperties(file);
-				if(properties.isEmpty()) { problems.add("Cannot read " + file.getFileName() + "."); continue; }
-				add(ProviderDefinition.of(properties.get()), Origin.USER_DEFINITION, file, file.getFileName().toString());
-			}
-		}
-		catch(IOException e)
-		{
-			problems.add("Cannot read " + folder + ": " + e.getMessage());
-		}
-	}
-
-	private void loadPlugins(Path folder)
-	{
-		if(!Files.isDirectory(folder)) return;
-		List<URL> jars = new ArrayList<>();
+		List<Path> jars = new ArrayList<>();
 		try(DirectoryStream<Path> files = Files.newDirectoryStream(folder, "*.jar"))
 		{
-			for(Path jar : files) jars.add(jar.toUri().toURL());
+			files.forEach(jars::add);
 		}
 		catch(IOException e)
 		{
 			problems.add("Cannot read " + folder + ": " + e.getMessage());
 		}
-		if(jars.isEmpty()) return;
-		// Plug-ins run as code with the user's rights; the settings window says so next to them.
-		loadServices(new URLClassLoader(jars.toArray(URL[]::new), ProviderRegistry.class.getClassLoader()), Origin.PLUGIN);
+		Collections.sort(jars);
+		for(Path jar : jars)
+		{
+			String jarName = jar.getFileName().toString();
+			try
+			{
+				// One class loader per jar, so each jar's resources are read from that jar. Plug-ins run as code with the
+				// user's rights; the settings window says so next to them.
+				@SuppressWarnings("resource") // stays open while the plug-in's classes are in use
+				URLClassLoader loader = new URLClassLoader(new URL[] { jar.toUri().toURL() }, ProviderRegistry.class.getClassLoader());
+				URL list = loader.findResource(PLUGIN_DEFINITIONS);
+				if(list != null)
+				{
+					try(InputStream in = list.openStream())
+					{
+						for(String name : lines(in))
+						{
+							URL definition = loader.findResource(name.startsWith("/") ? name.substring(1) : name);
+							if(definition == null) { problems.add(jarName + ": " + name + " is listed but not in the jar."); continue; }
+							try(InputStream definitionIn = definition.openStream())
+							{
+								Properties properties = new Properties();
+								properties.load(definitionIn);
+								add(ProviderDefinition.of(properties), Origin.PLUGIN, jar, jarName + "/" + name);
+							}
+						}
+					}
+				}
+				loadServices(loader, Origin.PLUGIN, jar, builtInClasses);
+			}
+			catch(IOException | IllegalArgumentException e)
+			{
+				problems.add(jarName + " could not be read: " + e.getMessage());
+			}
+		}
 	}
 
-	private void loadServices(ClassLoader loader, Origin origin)
+	/**
+	 * Loads the Java providers a class loader can see.
+	 * @param skip Classes already loaded from the app itself; a plug-in's loader sees them again through its parent.
+	 * @return The names of the classes loaded.
+	 */
+	private Set<String> loadServices(ClassLoader loader, Origin origin, Path jar, Set<String> skip)
 	{
-		ServiceLoader<RateProvider> services = ServiceLoader.load(RateProvider.class, loader);
-		var iterator = services.stream().iterator();
+		Set<String> loaded = new HashSet<>();
+		var iterator = ServiceLoader.load(RateProvider.class, loader).stream().iterator();
+		String source = jar == null ? "A provider" : jar.getFileName().toString();
 		while(true)
 		{
 			try
 			{
 				if(!iterator.hasNext()) break;
 				ServiceLoader.Provider<RateProvider> service = iterator.next();
-				// The parent loader's services show up again through a plug-in loader; keep only new ones.
-				if(origin == Origin.PLUGIN && service.type().getClassLoader() != loader) continue;
-				addProvider(service.get(), origin, null, service.type().getName());
+				if(skip.contains(service.type().getName())) continue;
+				addProvider(service.get(), origin, jar, service.type().getName());
+				loaded.add(service.type().getName());
 			}
 			catch(ServiceConfigurationError | RuntimeException | LinkageError e)
 			{
-				problems.add("A " + (origin == Origin.PLUGIN ? "plug-in" : "provider") + " could not be loaded: " + e.getMessage());
+				problems.add(source + " could not be loaded: " + e.getMessage());
 			}
 		}
+		return loaded;
 	}
 
-	private void add(ProviderDefinition definition, Origin origin, Path file, String source)
+	private void add(ProviderDefinition definition, Origin origin, Path jar, String source)
 	{
 		if(!definition.isValid())
 		{
 			problems.add(source + ": " + String.join(" ", definition.problems()));
 			return;
 		}
-		addProvider(definition.createProvider(), origin, file, source);
+		addProvider(definition.createProvider(), origin, jar, source);
 	}
 
-	private void addProvider(RateProvider provider, Origin origin, Path file, String source)
+	private void addProvider(RateProvider provider, Origin origin, Path jar, String source)
 	{
-		addEntry(new Entry(provider, origin, Optional.ofNullable(file)), source);
+		addEntry(new Entry(provider, origin, Optional.ofNullable(jar)), source);
 	}
 
 	private void addEntry(Entry entry, String source)
@@ -229,6 +248,18 @@ public final class ProviderRegistry
 			return;
 		}
 		entries.put(entry.provider().id(), entry);
+	}
+
+	private static List<String> lines(InputStream in) throws IOException
+	{
+		List<String> lines = new ArrayList<>();
+		BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
+		for(String line; (line = reader.readLine()) != null;)
+		{
+			String trimmed = line.trim();
+			if(!trimmed.isEmpty() && !trimmed.startsWith("#")) lines.add(trimmed);
+		}
+		return lines;
 	}
 
 	/** Adds a provider written in Java, e.g. by a test. */
@@ -250,41 +281,9 @@ public final class ProviderRegistry
 		return Optional.ofNullable(entries.get(id));
 	}
 
-	/** Definitions and plug-ins that could not be loaded, with the reason. */
+	/** Plug-ins and definitions that could not be loaded, with the reason. */
 	public List<String> problems()
 	{
 		return Collections.unmodifiableList(problems);
-	}
-
-	/**
-	 * Saves a user definition as ~/.indiangold/providers/ID.properties. Reload the registry afterwards.
-	 * @param definition The definition; it must be valid and must not reuse a built-in id.
-	 * @return The file written.
-	 * @throws IOException If it cannot be written.
-	 * @throws IllegalArgumentException If the definition is invalid or its id belongs to a built-in provider.
-	 */
-	public Path save(ProviderDefinition definition) throws IOException
-	{
-		if(!definition.isValid()) throw new IllegalArgumentException(String.join(" ", definition.problems()));
-		Entry existing = entries.get(definition.id());
-		if(existing != null && existing.origin() != Origin.USER_DEFINITION)
-			throw new IllegalArgumentException("The id \"" + definition.id() + "\" belongs to the built-in " + existing.provider().name() + "; choose another id.");
-		if(dataDir == null) throw new IOException("No data folder to save into.");
-		Path file = dataDir.resolve(PROVIDERS_FOLDER).resolve(definition.id() + ".properties");
-		SafeFiles.writeProperties(file, definition.toProperties(), "IndianGold rate source: " + definition.name());
-		return file;
-	}
-
-	/**
-	 * Deletes a user definition file; built-in providers cannot be deleted.
-	 * @param id The provider id.
-	 * @throws IOException If the file cannot be deleted.
-	 */
-	public void delete(String id) throws IOException
-	{
-		Entry entry = entries.get(id);
-		if(entry == null || entry.file().isEmpty()) throw new IllegalArgumentException("Only your own definitions can be deleted.");
-		Files.deleteIfExists(entry.file().get());
-		Files.deleteIfExists(SafeFiles.backupOf(entry.file().get()));
 	}
 }

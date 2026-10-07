@@ -71,7 +71,7 @@ They are set once, in `EXTRA_MODULES` at the top of the `Jenkinsfile`. `jdeps` r
 | Vendor | Sounak Choudhury |
 | Description | Weight and price calculator for Indian units (ratti, tola, bhori) with metal market rates |
 | Windows | `--win-dir-chooser --win-menu --win-menu-group IndianGold --win-shortcut` |
-| Linux | `--linux-app-category utils --linux-menu-group "Utility;Calculator" --linux-shortcut` |
+| Linux | `--linux-app-category utils --linux-menu-group "Utility;Calculator" --linux-shortcut --resource-dir extras/linux --java-options "--add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED"`: the desktop entry from `extras/linux/IndianGold.desktop` adds `StartupWMClass=IndianGold`, and the option lets the app set that window class (see *Dock and taskbar* below) |
 | macOS | `--mac-app-category finance --mac-package-name IndianGold` |
 
 The Jenkinsfile is the only packaging definition. There is no jpackage configuration in `pom.xml`.
@@ -85,8 +85,12 @@ Everything the app writes is per user, in `~/.indiangold/` (`%USERPROFILE%\.indi
 | `units.dat` | Units and their milligram values and all settings as a Java properties file: country, currency, taxes, display options, the units rates are shown in, gold purity rows, the rate sources (order, on/off) and each source's own settings, including **API keys in plain text** (the file is readable only by the user) |
 | `units.dat.bak` | The previous version of `units.dat` |
 | `rates.properties` (+ `.bak`) | The last prices and exchange rates from each source, errors, and request counts for sources with a monthly quota, so the rate bar works offline and at start |
-| `providers/*.properties` | Rate sources the user defined in Settings → Market rates (New / Duplicate) |
-| `plugins/*.jar` | Optional Java plug-ins with more rate sources, loaded at start |
+| `plugins/*.jar` | Optional plug-ins with more rate sources (see [docs/PLUGINS.md](docs/PLUGINS.md)); loaded at start and by "Reload plug-ins" |
+| `indiangold.png` | The icon for the Linux desktop entry below |
+
+The calculator's last weight, rate, units, making charge and discount are saved in `units.dat` (`$last.*`) when the window closes, and restored at start.
+
+On Linux, when the plain jar runs (not an installed package), the app also writes `~/.local/share/applications/indiangold.desktop`, pointing at the running jar, so docks can show the window and the app can be pinned.
 
 On start, the first usable file of these is loaded:
 
@@ -116,8 +120,8 @@ For each metal the first enabled source (in the user's order) with a price less 
 
 **Adding a source:**
 
-- *Without code:* a definition file. `type=json-api` reads values with JSON pointers, `type=web-page` with CSS selectors (jsoup). All keys are documented in `ProviderDefinition`; the built-in ones in `src/main/resources/providers/` are examples. Users create them in Settings → Market rates → New/Duplicate, with a Test button. To ship one with the app, add it there and to `providers/index.list` (the order is the default priority), and add a test against a recorded response in `ProvidersTest`.
-- *In Java:* implement `RateProvider` with a public no-argument constructor and list it in `META-INF/services/com.sounaks.indiangold.rates.RateProvider`. Built into the jar, or as a jar in `~/.indiangold/plugins/`.
+- *As a plug-in* (by anyone, without a new release): a jar in `~/.indiangold/plugins/` with definition files (`type=json-api` reads values with JSON pointers, `type=web-page` with CSS selectors) and/or Java classes implementing `RateProvider`. The developer guide is [docs/PLUGINS.md](docs/PLUGINS.md); the app links to it from Settings → Market rates ("How to write a plug-in"), and `PluginsTest` builds both kinds the way the guide describes.
+- *Built in:* add a definition to `src/main/resources/providers/` and to `providers/index.list` (the order is the default priority), or a Java class listed in `src/main/resources/META-INF/services/com.sounaks.indiangold.rates.RateProvider`, plus a test against a recorded response in `ProvidersTest`.
 
 Rules every source follows: web pages are fetched at most once an hour, only where robots.txt allows it, and the User-Agent is always `IndianGold/<version> (+https://github.com/sounak3/indiangold)`. **Never make a source pose as a browser** to get past a site's blocking; goodreturns.in was left out for that reason. kitco.com and goldprice.org were left out because their terms forbid automated access.
 
@@ -182,6 +186,14 @@ To check that it works: `systemctl --user start indiangold-dev-trigger.service`,
 A single Maven build writes the jar more than once (the shade plugin replaces it). The 15-second quiet period merges those triggers into one build. Each deploy stage times out after 5 minutes, so a powered-off VM only fails its own branch. Each stage prints the SHA-256 of the copy on the Desktop, so you can check from the log that all three machines got the same jar.
 
 Because of this trigger, don't run `mvn package` in the working copy unless you want the jar pushed to all three machines. Experiment in a copy instead (`rsync` without `target` and `.git`).
+
+## Dock and taskbar
+
+Linux docks show a running window only when they can match its window class to a `.desktop` file. Java names the class after the main class (`com-sounaks-indiangold-IndianGold`), so the window used to be missing from the dock, also when minimized. `DesktopIntegration` now sets the class to `IndianGold` (this needs `java.desktop/sun.awt.X11` opened: the jar's manifest has `Add-Opens`, the installed app gets `--add-opens`). The installed desktop entry says `StartupWMClass=IndianGold`, and plain-jar runs write their own entry (see *Where the app stores its data*). Windows carry the icon in 16–256 px; on macOS the dock icon is set with `java.awt.Taskbar`.
+
+Some docks only show pinned apps (on dell5558, Dash2Dock Lite did not show GNOME Calculator either while it ran); there, pin IndianGold from the app grid.
+
+**Never use `java.awt.Desktop` or `java.awt.Taskbar` on Linux.** They load GTK into the app's process; started from a snap-packaged program (e.g. VS Code), GTK then loads the snap's libraries and the app dies with `symbol lookup error ... __libc_pthread_init`. `Links` opens pages, folders and mail with `xdg-open` in a separate process instead, without the snap's environment variables.
 
 ## Known issues and recommendations
 
