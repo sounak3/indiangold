@@ -71,6 +71,8 @@
                                     <manifestEntries>
                                         <!-- jsoup is a multi-release jar; keep its Java 11+ classes active. -->
                                         <Multi-Release>true</Multi-Release>
+                                        <!-- Lets the app name its windows "IndianGold" so Linux docks show them (see DesktopIntegration). -->
+                                        <Add-Opens>java.desktop/sun.awt.X11</Add-Opens>
                                     </manifestEntries>
                                 </transformer>
                                 <!-- Merges META-INF/services files, where rate provider plug-ins are registered. -->

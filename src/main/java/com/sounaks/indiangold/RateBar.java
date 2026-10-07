@@ -61,6 +61,8 @@ public class RateBar extends JPanel
 	private final List<MouseListener> mouseListeners = new ArrayList<>();
 	private Border borderType;
 	private boolean updating;
+	private transient Runnable sizeChanged = () -> { };
+	private Dimension shownSize;
 
 	RateBar(RateService service, MarketSettings settings, FileOperations fileOps, Border borderType)
 	{
@@ -87,6 +89,12 @@ public class RateBar extends JPanel
 		add(Box.createVerticalStrut(4), BorderLayout.NORTH);
 		add(rowsPanel, BorderLayout.CENTER);
 		add(side, BorderLayout.EAST);
+	}
+
+	/** Called when new contents change the bar's preferred size, so the window can fit itself to it. */
+	void setSizeChangedListener(Runnable listener)
+	{
+		sizeChanged = listener == null ? () -> { } : listener;
 	}
 
 	/** Redraws the bar after a settings change (currency, units, purities, sources). */
@@ -176,6 +184,9 @@ public class RateBar extends JPanel
 		for(MouseListener listener : mouseListeners) attach(listener);
 		revalidate();
 		repaint();
+		Dimension size = getPreferredSize();
+		if(shownSize != null && !size.equals(shownSize) && isShowing()) sizeChanged.run();
+		shownSize = size;
 	}
 
 	private RateLabel row(Metal metal, String title, double fineness, RateService.Rates rates, String currency)

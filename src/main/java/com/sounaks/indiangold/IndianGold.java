@@ -38,7 +38,6 @@ import java.text.DecimalFormat;
 import java.util.Currency;
 import java.util.Properties;
 import java.util.Vector;
-import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
@@ -103,22 +102,87 @@ public class IndianGold extends JFrame
     }
 
     /**
-     * Internal method to make the sentence to be displayed in the price panel.
-     * @return A string to be displayed in the price panel.
+     * Internal method to show the price in the price panel: the total in red, and the breakup in brackets with the
+     * names in black and the amounts in dark gray.
      */
-    private String getCostString(String cost, String mkCharge, String discount, String gstPercent, String gst, String total)
+    private void showCost(String cost, String mkCharge, String discount, String gstPercent, String gst, String total)
     {
-        String currSymbol = currency.getSymbol();
-        String costString = "Total: " + currSymbol + " " + total + ". (Base price: " + currSymbol + " " 
-                + cost + ", Making charge: " + currSymbol + " " + mkCharge + ", Discount: " + currSymbol 
-                + " " + discount + " and Taxes " + gstPercent + "%: " + currSymbol + " " + gst + ")";
-        
-        return costString;
+        String symbol = currency.getSymbol() + " ";
+        javax.swing.text.StyledDocument doc = costArea.getStyledDocument();
+        SimpleAttributeSet totalStyle = new SimpleAttributeSet();
+        StyleConstants.setForeground(totalStyle, Color.red);
+        StyleConstants.setBold(totalStyle, true);
+        SimpleAttributeSet nameStyle = new SimpleAttributeSet();
+        StyleConstants.setForeground(nameStyle, Color.black);
+        StyleConstants.setBold(nameStyle, false); // only the total is bold
+        SimpleAttributeSet valueStyle = new SimpleAttributeSet();
+        StyleConstants.setForeground(valueStyle, new Color(96, 96, 96)); // dark gray, clearly apart from the black names
+        StyleConstants.setBold(valueStyle, false);
+        String[][] parts = {
+            { "Total: " + symbol + total + ".", null },
+            { " (Base price: ", symbol + cost },
+            { ", Making charge: ", symbol + mkCharge },
+            { ", Discount: ", symbol + discount },
+            { " and Taxes " + gstPercent + "%: ", symbol + gst },
+            { ")", null } };
+        try
+        {
+            doc.remove(0, doc.getLength());
+            for(int i = 0; i < parts.length; i++)
+            {
+                doc.insertString(doc.getLength(), parts[i][0], i == 0 ? totalStyle : nameStyle);
+                if(parts[i][1] != null) doc.insertString(doc.getLength(), parts[i][1], valueStyle);
+            }
+        }
+        catch(javax.swing.text.BadLocationException e)
+        {
+            costArea.setText("Total: " + symbol + total);
+        }
     }
-    
-    private String getCostString()
+
+    private void showCost()
     {
-        return getCostString(localeZero(), localeZero(), localeZero(), localeZero(), localeZero(), localeZero());
+        showCost(localeZero(), localeZero(), localeZero(), localeZero(), localeZero(), localeZero());
+    }
+
+    /**
+     * Saves what the calculator shows (weight, rate, units, making charge, discount), so it is there again at the
+     * next start.
+     */
+    void saveCalculator()
+    {
+        fOps.setValue("$last.weight", weightField.getText());
+        fOps.setValue("$last.weightunit", String.valueOf(weightUnitCombo1.getSelectedItem()));
+        fOps.setValue("$last.rate", rateField.getText());
+        fOps.setValue("$last.per", noOfUnitsField.getText());
+        fOps.setValue("$last.rateunit", String.valueOf(weightUnitCombo2.getSelectedItem()));
+        fOps.setValue("$last.making", makingChargeField.getText());
+        fOps.setValue("$last.discount", discountField.getText());
+        fOps.setValue("$last.discounton", String.valueOf(discountOnCombo3.getSelectedItem()));
+        fOps.saveToFile();
+    }
+
+    /** Puts back what the calculator showed when the app was last closed. */
+    private void restoreCalculator()
+    {
+        if(fOps.getValue("$last.rateunit", null) == null) return;
+        weightField.setText(fOps.getValue("$last.weight", ""));
+        rateField.setText(fOps.getValue("$last.rate", rateField.getText()));
+        noOfUnitsField.setText(fOps.getValue("$last.per", noOfUnitsField.getText()));
+        makingChargeField.setText(fOps.getValue("$last.making", ""));
+        discountField.setText(fOps.getValue("$last.discount", ""));
+        discountOnCombo3.setSelectedItem(fOps.getValue("$last.discounton", "Price"));
+        String weightUnit = fOps.getValue("$last.weightunit", "");
+        if(weightList.contains(weightUnit)) weightUnitCombo1.setSelectedItem(weightUnit);
+        String rateUnit = fOps.getValue("$last.rateunit", "");
+        if(weightList.contains(rateUnit))
+        {
+            weightUnitCombo2.setSelectedItem(rateUnit);
+            labelWeightUnit.setText(rateUnit.contains("(") && rateUnit.indexOf("(") < rateUnit.indexOf(")")
+                    ? rateUnit.substring(rateUnit.indexOf("(") + 1, rateUnit.indexOf(")")) : rateUnit);
+        }
+        calculateWeights();
+        calculateCost();
     }
 
     /**
@@ -252,9 +316,9 @@ public class IndianGold extends JFrame
         String totalStr = formatter.format(total);
 
         if(Double.isNaN(pricePerMiligram * noOfMiligrams))
-            costArea.setText(getCostString());
+            showCost();
         else
-            costArea.setText(getCostString(priceStr, makingChargeStr, discountStr, strGstPercent, gstStr, totalStr));
+            showCost(priceStr, makingChargeStr, discountStr, strGstPercent, gstStr, totalStr);
     }
 
     /**
@@ -292,7 +356,7 @@ public class IndianGold extends JFrame
         if(unit.contains("(") && unit.contains(")") && unit.indexOf("(") < unit.indexOf(")"))
             labelWeightUnit.setText(unit.substring(unit.indexOf("(")+1, unit.indexOf(")")));
         currency=CurrencyCatalog.resolve(fOps.getValue("$currency", "USD"));
-        costArea.setText(getCostString());
+        showCost();
         labelRate1.setText("Rate : "+currency.getSymbol());
         showRateBar(fOps.getValue("$ratebar", "1").equals("1"));
         showMainPane(fOps.getValue("$calculator", "0").equals("1"), false);
@@ -333,14 +397,34 @@ public class IndianGold extends JFrame
         int jj=rect.y+rect.height;
         mainPane.setVisible(show);
         ratePane.setBorder(fOps.getValue("$calculator", "1").equals("1")?BorderFactory.createEtchedBorder():BorderFactory.createRaisedBevelBorder());
-        pack();
+        repack();
         if(show) setTitle(NAME_STRING_FULL);
         else setTitle(NAME_STRING_SHORT);
         if(invokedByRateBar)
         {
+            // keep the bottom-right corner where it was, but never move the window off the screen
             rect=getBounds();
-            setLocation(ii-rect.width,jj-rect.height);
+            Rectangle screen = getGraphicsConfiguration().getBounds();
+            Insets insets = Toolkit.getDefaultToolkit().getScreenInsets(getGraphicsConfiguration());
+            int x = Math.max(screen.x + insets.left, ii - rect.width);
+            int y = Math.max(screen.y + insets.top, jj - rect.height);
+            setLocation(x, y);
         }
+    }
+
+    /**
+     * Fits the window to its contents. The window is not resizable, so Java gives the window manager its size as
+     * both minimum and maximum, but pack() alone does not update those limits: after switching between the full
+     * window and the rate bar alone, the window manager squeezed the window back to the old size when it was
+     * restored from minimized, or kept an empty area. Allowing resizing for the moment of the pack sends the new
+     * limits.
+     */
+    void repack()
+    {
+        boolean fixed = !isResizable();
+        if(fixed) setResizable(true);
+        pack();
+        if(fixed) setResizable(false);
     }
     
     public void showRateBar(boolean show)
@@ -352,7 +436,7 @@ public class IndianGold extends JFrame
             ratePane.setVisible(true);
             ratePane.rebuild();
             ratePane.setBorder(fOps.getValue("$calculator", "1").equals("1")?BorderFactory.createEtchedBorder():BorderFactory.createRaisedBevelBorder());
-            pack();
+            repack();
             if(fOps.getValue("$clickcondition", "1").equals("1"))
             {
                 p12.setToolTipText("Click on a rate on the rate list to update here");
@@ -371,7 +455,7 @@ public class IndianGold extends JFrame
             ratePane.removeMouseListener(shAdapter); // removed because it will be re-created if ratebar is already present
             shAdapter=null;                          // and clickcondition settings also may have changed
             ratePane.setVisible(false);
-            pack();
+            repack();
             p12.setToolTipText(null);
             for(Component cmp : p12.getComponents())
                 if(cmp instanceof JComponent) ((JComponent)cmp).setToolTipText(null);
@@ -399,7 +483,11 @@ public class IndianGold extends JFrame
         MarketSettings.DisplayUnit unit = label.unit();
         double qty = unit.quantity();
         noOfUnitsField.setText(qty == Math.rint(qty) ? String.valueOf((long)qty) : String.valueOf(qty));
-        if(weightList.contains(unit.name())) weightUnitCombo2.setSelectedItem(unit.name());
+        if(weightList.contains(unit.name()))
+        {
+            weightUnitCombo2.setSelectedItem(unit.name());
+            weightUnitCombo1.setSelectedItem(unit.name()); // the weight is entered in the same unit as the rate
+        }
         String selected = (String) weightUnitCombo2.getSelectedItem();
         if(selected != null && selected.contains("(") && selected.contains(")") && selected.indexOf("(") < selected.indexOf(")"))
             labelWeightUnit.setText(selected.substring(selected.indexOf("(")+1, selected.indexOf(")")));
@@ -639,7 +727,7 @@ public class IndianGold extends JFrame
         StyleConstants.setBold(attribs , true);
         StyleConstants.setForeground(attribs , Color.red);
         costArea.setParagraphAttributes(attribs,true);  
-        costArea.setText(getCostString());
+        showCost();
         costArea.setEditable(false);
         costArea.setFocusable(false);
         costArea.setBorder(BorderFactory.createEtchedBorder());
@@ -762,9 +850,19 @@ public class IndianGold extends JFrame
             component.setPreferredSize(new Dimension(component.getPreferredSize().width, requiredTFheight));
         }
         ratePane = new RateBar(rateService, marketSettings, fOps, (fOps.getValue("$calculator", "1").equals("1")?BorderFactory.createEtchedBorder():BorderFactory.createRaisedBevelBorder()));
+        ratePane.setSizeChangedListener(() -> { if(isDisplayable()) repack(); }); // new prices can change the bar's size
 
         init();
         resetUIData();
+        restoreCalculator();
+        addWindowListener(new WindowAdapter()
+        {
+            @Override
+            public void windowClosing(WindowEvent e)
+            {
+                saveCalculator();
+            }
+        });
     }
     
     /**
@@ -776,16 +874,7 @@ public class IndianGold extends JFrame
         add(mainPane, BorderLayout.CENTER);
         add(ratePane, BorderLayout.EAST);
 
-        try
-        {
-            java.net.URL url1 = Thread.currentThread().getContextClassLoader().getResource("igcircle.gif");
-            Image icon = ImageIO.read(url1);
-            setIconImage(icon);
-        }
-        catch(IOException e)
-        {
-            System.out.println("Icon not found.");
-        }
+        DesktopIntegration.applyIcons(this);
     }
     
     /**
@@ -912,7 +1001,7 @@ public class IndianGold extends JFrame
                 fOps.saveToFile();
                 resetUIData();
                 if(useCountryUnits) useGoldUnitInCalculator();
-                pack();
+                repack();
             });
         }
         rateService.start();
@@ -1016,6 +1105,7 @@ public class IndianGold extends JFrame
      */
     public static void main(String args[])
     {
+        DesktopIntegration.setWindowClass(); // before the first window, so docks can match it to IndianGold
         SwingUtilities.invokeLater(() -> {
             IndianGold mm=new IndianGold();
             mm.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -1024,6 +1114,9 @@ public class IndianGold extends JFrame
             mm.setLocation(loc.width,loc.height);
             mm.setResizable(false);
             mm.setVisible(true);
+            Thread launcher = new Thread(DesktopIntegration::registerJarLauncher, "desktop-entry");
+            launcher.setDaemon(true);
+            launcher.start();
             mm.startRates();
         });
     }

@@ -4,6 +4,7 @@
 #   IndianGold.png  (Linux, 512x512)
 #   IndianGold.ico  (Windows, 16-256 px)
 #   IndianGold.icns (macOS, 16-1024 px as PNG entries)
+#   ../src/main/resources/icons/indiangold-*.png (window and dock icons, 16-256 px)
 # Needs Java 21 (to redraw the master), ImageMagick and python3.
 # Usage: extras/create-icons.sh [--redraw]
 ################################################################
@@ -22,6 +23,8 @@ for s in 16 24 32 48 64 128 256 512 1024; do
 done
 
 cp "$TMP/512.png" IndianGold.png
+mkdir -p ../src/main/resources/icons
+for s in 16 32 48 64 128 256; do cp "$TMP/$s.png" "../src/main/resources/icons/indiangold-$s.png"; done
 
 convert "$TMP/16.png" "$TMP/24.png" "$TMP/32.png" "$TMP/48.png" "$TMP/64.png" "$TMP/128.png" "$TMP/256.png" IndianGold.ico
 
