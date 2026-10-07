@@ -385,6 +385,7 @@ public class IndianGold extends JFrame
         box.setVisible(true);
         resetUIData();
         ratePane.rebuild();
+        if(box.manualPricesChanged()) rateService.refresh(com.sounaks.indiangold.rates.ManualProvider.ID);
         rateService.refreshNow(false); // sources may have been switched on; each source's minimum interval still applies
     }
 

@@ -116,7 +116,8 @@ class RateServiceTest
 
 		@Override public List<RateService.SourceChoice> sources() { return sources; }
 		@Override public int autoRefreshMinutes() { return autoRefreshMinutes; }
-		@Override public List<LocalTime> schedule(String providerId) { return List.of(); }
+		final Map<String, List<LocalTime>> schedules = new HashMap<>();
+		@Override public Optional<List<LocalTime>> schedule(String providerId) { return Optional.ofNullable(schedules.get(providerId)); }
 
 		@Override
 		public ProviderSettings providerSettings(String providerId)
@@ -228,6 +229,24 @@ class RateServiceTest
 		service.fetchDue();
 		assertEquals(2, limited.fetches.get());
 		assertEquals(2, service.budget(limited).usedToday());
+	}
+
+	@Test
+	void theUserCanChooseOtherTimesOrNone()
+	{
+		TestClock clock = new TestClock("2026-10-07T08:00:00");
+		FakeProvider limited = new FakeProvider("limited", 100, Duration.ofMinutes(1));
+		TestSettings settings = new TestSettings();
+		settings.schedules.put("limited", List.of(LocalTime.of(7, 45)));
+		RateService service = service(clock, settings, RateStore.inMemory(), limited);
+
+		service.fetchDue();
+		assertEquals(1, limited.fetches.get(), "07:45 has passed");
+
+		settings.schedules.put("limited", List.of());
+		clock.set("2026-10-08T23:00:00");
+		service.fetchDue();
+		assertEquals(1, limited.fetches.get(), "no automatic updates at all");
 	}
 
 	@Test

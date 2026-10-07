@@ -55,7 +55,7 @@ class CountryDefaultsTest
 	@Test
 	void everyCountryOfTheOldCurrencyListIsOffered()
 	{
-		for (String oldCode : new CurrencyCode().getCodeList()) {
+		for (String oldCode : OldCurrencyCodes.list()) {
 			String current = CurrencyCatalog.resolve(oldCode).getCurrencyCode();
 			boolean offered = countries.countries().stream().anyMatch(c -> countries.forCountry(c.code()).currency().equals(current));
 			assertTrue(offered, oldCode + " (" + current + ") has no country");

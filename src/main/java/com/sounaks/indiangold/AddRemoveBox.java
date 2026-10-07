@@ -20,6 +20,9 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.Vector;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import javax.swing.border.TitledBorder;
 
 /**
@@ -32,12 +35,14 @@ public class AddRemoveBox extends JDialog
 	private final JList unitEditableList;
 	private final JButton buttonAdd,buttonEdit,buttonRemove,buttonSave,buttonCancel;
 	private final JScrollPane unitListScrollPane;
-        private final JLabel labelVisRows, labelComboCurrency, labelClicks, labelMinutes, labelVisDecimals, labelRateUnits;
-        private final JButton buttonCustomizeRates;
+        private final JLabel labelVisRows, labelVisDecimals;
         private final MarketSettings marketSettings;
         private final com.sounaks.indiangold.rates.RateService rateService;
-        private final JComboBox comboVisDecimals,comboCurrency,comboVisRows,comboAutoFetchMinutes;
-        private final JRadioButton rbCalculator, rbRateBar, rbBoth, rbManualFetchRates, rbAutoFetchRates, rbRateBarClickPolicy1, rbRateBarClickPolicy2;
+        private final MarketRatesPanel marketPanel;
+        private final JComboBox<CountryDefaults.Country> countryBox;
+        private final JComboBox<CurrencyCatalog.Choice> currencyBox;
+        private final JComboBox comboVisDecimals,comboVisRows;
+        private final JRadioButton rbCalculator, rbRateBar, rbBoth, rbRateBarClickPolicy1, rbRateBarClickPolicy2;
 	FileOperations fOps;
         MouseClicks clickAdapter;
         ActionAdapter actionAdapter;
@@ -96,8 +101,8 @@ public class AddRemoveBox extends JDialog
 		p12.add(buttonAdd);
 		p12.add(buttonEdit);
 		p12.add(buttonRemove);
-		p1.add(p11, BorderLayout.NORTH);
-		p1.add(p12, BorderLayout.CENTER);                
+		p1.add(p11, BorderLayout.CENTER); // the list takes the free space
+		p1.add(p12, BorderLayout.SOUTH);
 		p1.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(),"Weight Unit List"));
 
                 leftPane.add(p1,BorderLayout.CENTER);
@@ -122,91 +127,73 @@ public class AddRemoveBox extends JDialog
                 p2.add(rbBoth);
 		p2.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(),"Show/Hide Interface"));
 
-		leftPane.add(p2,BorderLayout.SOUTH);
-		JPanel rightPane=new JPanel();
-                rightPane.setLayout(new BorderLayout());
-                
-                String mins[]=new String[60/2];
-                for(int i=0;i<60/2;i++)
-                    mins[i]=String.valueOf((i+1)*2);
-                JPanel rp2 = new JPanel();
-                rp2.setLayout(new BoxLayout(rp2, BoxLayout.PAGE_AXIS));
-                JPanel rp20=new JPanel();
-                rp20.setLayout(new BoxLayout(rp20, BoxLayout.LINE_AXIS));
-                rbManualFetchRates=new JRadioButton("Fetch market rates of metals manually on");
-                rbManualFetchRates.setActionCommand("RATE_BAR_AUTO");
-                rbManualFetchRates.addActionListener(actionAdapter);
-                labelClicks=new JLabel("left click");
-                rp20.add(rbManualFetchRates);
-                rp20.add(labelClicks);
-                JPanel rp21=new JPanel();
-                rp21.setLayout(new BoxLayout(rp21, BoxLayout.LINE_AXIS));
-                rbAutoFetchRates=new JRadioButton("Automatically fetch market rates every");
-                rbAutoFetchRates.setActionCommand("RATE_BAR_AUTO");
-                rbAutoFetchRates.addActionListener(actionAdapter);
-                comboAutoFetchMinutes=new JComboBox(mins);
-                ButtonGroup bg2=new ButtonGroup();
-                bg2.add(rbManualFetchRates);
-                bg2.add(rbAutoFetchRates);
-                labelMinutes=new JLabel(" minute(s)");
-                rp21.add(rbAutoFetchRates);
-                rp21.add(comboAutoFetchMinutes);
-                rp21.add(labelMinutes);
-                rp2.add(rp20);
-                rp20.setAlignmentX(LEFT_ALIGNMENT);
-                rp2.add(Box.createRigidArea(new Dimension(0,10)));
-                rp2.add(rp21);
-                rp21.setAlignmentX(LEFT_ALIGNMENT);
-                rp2.add(Box.createRigidArea(new Dimension(0,10)));
-                JPanel rp22=new JPanel();
-                rp22.setLayout(new BoxLayout(rp22, BoxLayout.LINE_AXIS));
-                labelComboCurrency=new JLabel("Select Your Currency : ");
-                comboCurrency=new JComboBox(new CurrencyComboModel());
-                comboCurrency.setUI(new CustomComboUI());
-                comboCurrency.setActionCommand("CURR_CHANGED");
-                comboCurrency.addActionListener(actionAdapter);
-                rp22.add(labelComboCurrency);
-                labelComboCurrency.setAlignmentX(LEFT_ALIGNMENT);
-                rp22.add(comboCurrency);
-                comboCurrency.setBorder(BorderFactory.createEtchedBorder());
-                rp2.add(rp22);
-                rp22.setAlignmentX(LEFT_ALIGNMENT);                
-                rp2.add(Box.createRigidArea(new Dimension(0,10)));
-                // Market prices are shown in the user's own units for each metal group; see CustomizeRatesDialog.
-                JPanel rp23=new JPanel();
-                rp23.setLayout(new BoxLayout(rp23, BoxLayout.LINE_AXIS));
-                labelRateUnits=new JLabel(CustomizeRatesDialog.summary(marketSettings));
-                labelRateUnits.setToolTipText("<html>The rate bar shows market prices converted to these units.<br>Clicking a rate fills the calculator with the same unit.</html>");
-                buttonCustomizeRates=new JButton("Customize rates...");
-                buttonCustomizeRates.setToolTipText("Choose the quantity and unit for each metal group, and the gold rows (24K, 22K, ...)");
-                buttonCustomizeRates.setActionCommand("CUSTOMIZE_RATES");
-                buttonCustomizeRates.addActionListener(actionAdapter);
-                rp23.add(labelRateUnits);
-                rp23.add(Box.createHorizontalStrut(10));
-                rp23.add(Box.createHorizontalGlue());
-                rp23.add(buttonCustomizeRates);
-                rp2.add(rp23);
-                rp23.setAlignmentX(LEFT_ALIGNMENT);
-                rp2.add(Box.createRigidArea(new Dimension(0,10)));
-                rbRateBarClickPolicy1=new JRadioButton("Single click to fill the rate and Double click to show/hide calculator");
+
+                // General tab: country, currency, what to show and how clicks on the rate bar work.
+                CountryDefaults countryTable = CountryDefaults.load();
+                countryBox = CountryDialog.countryBox(countryTable, marketSettings.country().orElse(CountryDefaults.systemCountry()));
+                countryBox.addActionListener(e -> fOps.setValue("$country", ((CountryDefaults.Country)countryBox.getSelectedItem()).code()));
+                JButton applyCountry = new JButton("Apply country defaults...");
+                applyCountry.setToolTipText("Sets the currency, the units rates are shown in, the gold rows and the taxes usual in this country");
+                currencyBox = new JComboBox<>(CurrencyCatalog.choices(rateService.current().fx(), marketSettings.currency()).toArray(CurrencyCatalog.Choice[]::new));
+                currencyBox.setMaximumRowCount(20);
+                selectCurrency(marketSettings.currency());
+                marketPanel = new MarketRatesPanel(this, fOps, marketSettings, rateService);
+                currencyBox.addActionListener(e -> {
+                    CurrencyCatalog.Choice choice = (CurrencyCatalog.Choice)currencyBox.getSelectedItem();
+                    if(choice != null) marketSettings.setCurrency(choice.currency().getCurrencyCode());
+                    marketPanel.refreshSummary();
+                });
+                applyCountry.addActionListener(e -> {
+                    CountryDefaults.Country country = (CountryDefaults.Country)countryBox.getSelectedItem();
+                    int answer = JOptionPane.showConfirmDialog(thisone, "Set the currency, rate units, gold rows and taxes usual in " + country.name() + "?\n"
+                            + "Your own choices for these will be replaced.", "Apply country defaults", JOptionPane.OK_CANCEL_OPTION);
+                    if(answer != JOptionPane.OK_OPTION) return;
+                    marketSettings.applyCountry(countryTable.forCountry(country.code()));
+                    selectCurrency(marketSettings.currency());
+                    marketPanel.refreshSummary();
+                    reload();
+                });
+                JPanel place = new JPanel(new GridBagLayout());
+                place.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Country and currency"));
+                GridBagConstraints gc = new GridBagConstraints();
+                gc.insets = new Insets(4, 4, 4, 4);
+                gc.anchor = GridBagConstraints.LINE_START;
+                gc.gridx = 0; gc.gridy = 0;
+                place.add(new JLabel("Country:"), gc);
+                gc.gridx = 1; gc.fill = GridBagConstraints.HORIZONTAL; gc.weightx = 1;
+                place.add(countryBox, gc);
+                gc.gridx = 2; gc.fill = GridBagConstraints.NONE; gc.weightx = 0;
+                place.add(applyCountry, gc);
+                gc.gridx = 0; gc.gridy = 1;
+                place.add(new JLabel("Currency:"), gc);
+                gc.gridx = 1; gc.gridwidth = 2; gc.fill = GridBagConstraints.HORIZONTAL;
+                place.add(currencyBox, gc);
+
+                rbRateBarClickPolicy1=new JRadioButton("Single click fills the rate, double click shows/hides the calculator, right click updates");
                 rbRateBarClickPolicy1.setActionCommand("RATE_BAR_CLICK");
                 rbRateBarClickPolicy1.addActionListener(actionAdapter);
-                rbRateBarClickPolicy2=new JRadioButton("Double click to fill the rate and Right click to show/hide calculator");
+                rbRateBarClickPolicy2=new JRadioButton("Double click fills the rate, right click shows/hides the calculator, single click updates");
                 rbRateBarClickPolicy2.setActionCommand("RATE_BAR_CLICK");
                 rbRateBarClickPolicy2.addActionListener(actionAdapter);
                 ButtonGroup bg3=new ButtonGroup();
                 bg3.add(rbRateBarClickPolicy1);
                 bg3.add(rbRateBarClickPolicy2);
-                rp2.add(rbRateBarClickPolicy1);
-                rp2.add(rbRateBarClickPolicy2);
+                JPanel clicks = new JPanel(new GridLayout(2, 1));
+                clicks.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Clicks on the rate bar"));
+                clicks.add(rbRateBarClickPolicy1);
+                clicks.add(rbRateBarClickPolicy2);
 
-                rp2.setBorder(BorderFactory.createTitledBorder(
-                                  BorderFactory.createEtchedBorder(),
-                                  "Market Rates/Prices Bar",
-                                  TitledBorder.TRAILING,
-                                  TitledBorder.DEFAULT_POSITION));
-                rightPane.add(rp2, BorderLayout.CENTER);
+                JPanel general = new JPanel();
+                general.setLayout(new BoxLayout(general, BoxLayout.PAGE_AXIS));
+                general.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
+                for(JComponent part : new JComponent[] { place, p2, clicks })
+                {
+                    part.setAlignmentX(LEFT_ALIGNMENT);
+                    general.add(part);
+                    general.add(Box.createVerticalStrut(6));
+                }
 
+                // Units & calculator tab: the weight unit list and the conversion table settings.
                 JPanel rp3=new JPanel();
                 rp3.setLayout(new BoxLayout(rp3, BoxLayout.PAGE_AXIS));
                 JPanel rp31=new JPanel();
@@ -224,6 +211,9 @@ public class AddRemoveBox extends JDialog
                 rp31.add(Box.createRigidArea(new Dimension(10,0)));
 		rp31.add(labelVisDecimals);
 		rp31.add(comboVisDecimals);
+                rp31.add(Box.createHorizontalGlue());
+                comboVisRows.setMaximumSize(comboVisRows.getPreferredSize());
+                comboVisDecimals.setMaximumSize(comboVisDecimals.getPreferredSize());
                 
                 rp3.add(rp31);
                 rp3.add(Box.createRigidArea(new Dimension(0,10)));
@@ -233,38 +223,38 @@ public class AddRemoveBox extends JDialog
                                   "IndianGold Calculator",
                                   TitledBorder.TRAILING,
                                   TitledBorder.DEFAULT_POSITION));
-                rightPane.add(rp3, BorderLayout.SOUTH);
+                JPanel unitsTab = new JPanel(new BorderLayout(6, 6));
+                unitsTab.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
+                unitsTab.add(leftPane, BorderLayout.CENTER);
+                unitsTab.add(rp3, BorderLayout.SOUTH);
 
-                JPanel centerPane=new JPanel();
-                centerPane.setLayout(new BorderLayout());
-                centerPane.add(leftPane, BorderLayout.LINE_START);
-                centerPane.add(rightPane, BorderLayout.LINE_END);
+                JTabbedPane tabs = new JTabbedPane();
+                JPanel generalHolder = new JPanel(new BorderLayout()); // keeps the parts at their natural height
+                generalHolder.add(general, BorderLayout.NORTH);
+                tabs.addTab("General", generalHolder);
+                tabs.addTab("Units & calculator", unitsTab);
+                tabs.addTab("Market rates", marketPanel);
                 JPanel bottomPane=new JPanel();
                 bottomPane.setLayout(new FlowLayout(FlowLayout.TRAILING));
                 bottomPane.add(buttonSave);
                 bottomPane.add(buttonCancel);
-                pane.add(centerPane, BorderLayout.CENTER);
+                pane.add(tabs, BorderLayout.CENTER);
                 pane.add(bottomPane, BorderLayout.SOUTH);
                 
                 reload();
                 comboVisRows.setSelectedItem(fOps.getValue("$numrows", "10"));
                 comboVisDecimals.setSelectedItem(fOps.getValue("$numdecimals", "2"));
-                comboCurrency.setSelectedItem((new CurrencyCode(fOps.getValue("$currency", "USD"))).getName());
 		displayNumRows(9); //for the list box in AddRemoveBox
-                rbManualFetchRates.setSelected(fOps.getValue("$rateauto", "0").equals("0")); //will depend on settings
-                rbAutoFetchRates.setSelected(!fOps.getValue("$rateauto", "0").equals("0")); //will depend on settings
                 boolean both=fOps.getValue("$calculator", "1").equals("1") && fOps.getValue("$ratebar", "1").equals("1");
                 rbCalculator.setSelected(fOps.getValue("$calculator", "1").equals("1") && !both); //will depend on settings
                 rbRateBar.setSelected(fOps.getValue("$ratebar", "1").equals("1") && !both); //will depend on settings
                 rbBoth.setSelected(both); //will depend on settings
-                comboAutoFetchMinutes.setSelectedItem(fOps.getValue("$rateauto", "2").equals("0")?"2":fOps.getValue("$rateauto", "2"));
 
 
                 setRateBarConfigEnabled(rbRateBar.isSelected() || rbBoth.isSelected());
                 setCalculatorConfigEnabled(rbCalculator.isSelected() || rbBoth.isSelected());
                 rbRateBarClickPolicy1.setSelected(fOps.getValue("$clickcondition", "1").equals("1"));
                 rbRateBarClickPolicy2.setSelected(fOps.getValue("$clickcondition", "1").equals("2"));
-                labelClicks.setText(rbRateBarClickPolicy1.isSelected()?"right click":"left click");
                 init();
                 ready = true;
 	}
@@ -287,17 +277,20 @@ public class AddRemoveBox extends JDialog
         
         private void setRateBarConfigEnabled(boolean enabled)
         {
-                rbManualFetchRates.setEnabled(enabled);
-                labelClicks.setEnabled(enabled);
-                rbAutoFetchRates.setEnabled(enabled);
-                comboAutoFetchMinutes.setEnabled(enabled && rbAutoFetchRates.isSelected());
-                labelMinutes.setEnabled(enabled);
-                labelComboCurrency.setEnabled(enabled);
-                comboCurrency.setEnabled(enabled);
-                labelRateUnits.setEnabled(enabled);
-                buttonCustomizeRates.setEnabled(enabled);
                 rbRateBarClickPolicy1.setEnabled(enabled);
                 rbRateBarClickPolicy2.setEnabled(enabled);
+        }
+
+        private void selectCurrency(String code)
+        {
+                for(int i = 0; i < currencyBox.getItemCount(); i++)
+                        if(currencyBox.getItemAt(i).currency().getCurrencyCode().equals(code)) currencyBox.setSelectedIndex(i);
+        }
+
+        /** Whether manual prices were entered, so they should be read after OK. */
+        boolean manualPricesChanged()
+        {
+                return marketPanel.manualPricesChanged();
         }
 
         private void setCalculatorConfigEnabled(boolean enabled)
@@ -465,12 +458,6 @@ public class AddRemoveBox extends JDialog
 		}
 		else if(actionCommand.equals("ALL_SAVE"))
 		{
-                        if(rbRateBar.isSelected() || rbBoth.isSelected()) // this code for setting rateauto if rate bar is activated
-                        {
-                            if(comboAutoFetchMinutes.isEnabled()) fOps.setValue("$rateauto", (String)comboAutoFetchMinutes.getSelectedItem());
-                            else fOps.setValue("$rateauto", "0");
-
-                        }
                         if(rbCalculator.isSelected() || rbBoth.isSelected()) // this code for setting numrows if calculator is activated
                         {
                             fOps.setValue("$numrows", (String)comboVisRows.getSelectedItem());
@@ -485,15 +472,6 @@ public class AddRemoveBox extends JDialog
 			fOps.discard();
 			dispose();
 		}
-                else if(actionCommand.equals("CURR_CHANGED"))
-                {
-                    fOps.setValue("$currency", (String)comboCurrency.getSelectedItem());
-                    labelRateUnits.setText(CustomizeRatesDialog.summary(marketSettings));
-                }
-                else if(actionCommand.equals("RATE_BAR_AUTO"))
-                {
-                    comboAutoFetchMinutes.setEnabled(rbAutoFetchRates.isSelected());
-                }
                 else if(actionCommand.equals("RATE_BAR"))
                 {
                     setRateBarConfigEnabled(rbRateBar.isSelected() || rbBoth.isSelected());
@@ -504,15 +482,6 @@ public class AddRemoveBox extends JDialog
                 else if(actionCommand.equals("RATE_BAR_CLICK"))
                 {
                     fOps.setValue("$clickcondition", rbRateBarClickPolicy1.isSelected()?"1":"2");
-                    labelClicks.setText(rbRateBarClickPolicy1.isSelected()?"right click":"left click");
-                }
-                else if(actionCommand.equals("CUSTOMIZE_RATES"))
-                {
-                    if(CustomizeRatesDialog.show(thisone, fOps, marketSettings, rateService))
-                    {
-                        labelRateUnits.setText(CustomizeRatesDialog.summary(marketSettings));
-                        reload(); // units may have been added to the unit list
-                    }
                 }
 	}
     }

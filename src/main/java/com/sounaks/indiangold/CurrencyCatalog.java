@@ -16,11 +16,17 @@
  */
 package com.sounaks.indiangold;
 
+import com.sounaks.indiangold.rates.FxRates;
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.Collator;
+import java.util.ArrayList;
 import java.util.Currency;
+import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * Turns saved currency codes into usable currencies. Codes from older versions that are obsolete or not ISO 4217
@@ -84,5 +90,60 @@ final class CurrencyCatalog
 		}
 		System.out.println("Unknown currency " + code + "; using " + FALLBACK.getCurrencyCode() + ".");
 		return FALLBACK;
+	}
+
+	/**
+	 * A currency to choose from, shown as e.g. "Indian Rupee (INR) \u20b9".
+	 * @param currency The currency.
+	 */
+	record Choice(Currency currency)
+	{
+		@Override
+		public String toString()
+		{
+			String symbol = currency.getSymbol();
+			return currency.getDisplayName() + " (" + currency.getCurrencyCode() + ")" + (symbol.equals(currency.getCurrencyCode()) ? "" : " " + symbol);
+		}
+	}
+
+	/**
+	 * Lists the currencies the user can choose: those the exchange rates cover (all current currencies Java knows
+	 * if there are no rates yet), without obsolete codes, funds and metals, sorted by name.
+	 * @param fx The exchange rates fetched so far.
+	 * @param current The current currency, always included.
+	 * @return The choices.
+	 */
+	static List<Choice> choices(FxRates fx, String current)
+	{
+		Set<String> codes = new TreeSet<>();
+		if(fx.perUsd().size() > 2) codes.addAll(fx.perUsd().keySet());
+		else
+		{
+			// No rates yet: the currencies countries use today (Java also knows long-gone ones such as DEM).
+			for(String country : Locale.getISOCountries())
+			{
+				Currency currency = Currency.getInstance(Locale.of("", country));
+				if(currency != null) codes.add(currency.getCurrencyCode());
+			}
+		}
+		codes.add(resolve(current).getCurrencyCode());
+		List<Choice> choices = new ArrayList<>();
+		for(String code : codes)
+		{
+			if(MIGRATIONS.containsKey(code) && !code.equals(current)) continue; // obsolete or not ISO
+			if(code.startsWith("X") && !Set.of("XAF", "XCD", "XCG", "XOF", "XPF").contains(code)) continue; // metals, funds, test codes
+			try
+			{
+				Currency currency = Currency.getInstance(code);
+				if(currency.getDefaultFractionDigits() >= 0) choices.add(new Choice(currency));
+			}
+			catch(IllegalArgumentException e)
+			{
+				// crypto and other codes Java does not know
+			}
+		}
+		Collator collator = Collator.getInstance();
+		choices.sort((a, b) -> collator.compare(a.toString(), b.toString()));
+		return choices;
 	}
 }

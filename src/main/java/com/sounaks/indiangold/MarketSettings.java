@@ -313,10 +313,12 @@ final class MarketSettings implements RateService.Settings
 	}
 
 	@Override
-	public List<LocalTime> schedule(String providerId)
+	public Optional<List<LocalTime>> schedule(String providerId)
 	{
+		Optional<String> stored = providerSettings(providerId).get("schedule");
+		if(stored.isEmpty()) return Optional.empty();
 		List<LocalTime> times = new ArrayList<>();
-		for(String time : providerSettings(providerId).get("schedule").orElse("").split(","))
+		for(String time : stored.get().split(","))
 		{
 			try
 			{
@@ -324,15 +326,19 @@ final class MarketSettings implements RateService.Settings
 			}
 			catch(DateTimeParseException e)
 			{
-				// skipped
+				// skipped ("off" means no automatic updates)
 			}
 		}
-		return times;
+		return Optional.of(times);
 	}
 
+	/**
+	 * Sets the update times of a source with a quota.
+	 * @param times The times; an empty list switches automatic updates off.
+	 */
 	void setSchedule(String providerId, List<LocalTime> times)
 	{
-		providerSettings(providerId).put("schedule", times.stream().sorted().map(LocalTime::toString).collect(Collectors.joining(",")));
+		providerSettings(providerId).put("schedule", times.isEmpty() ? "off" : times.stream().sorted().map(LocalTime::toString).collect(Collectors.joining(",")));
 	}
 
 	boolean webDisclaimerAccepted()

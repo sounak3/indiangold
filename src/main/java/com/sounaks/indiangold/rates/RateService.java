@@ -63,8 +63,9 @@ public final class RateService implements AutoCloseable
 		/** Minutes between automatic fetches of sources without a quota; 0 means only at start and on request. */
 		int autoRefreshMinutes();
 
-		/** The fetch times for a source with a quota; empty means its default schedule. */
-		List<LocalTime> schedule(String providerId);
+		/** The fetch times for a source with a quota: empty if the user has not chosen any (then its default schedule is
+		 * used), an empty list for no automatic updates. */
+		Optional<List<LocalTime>> schedule(String providerId);
 	}
 
 	public record SourceChoice(String id, boolean enabled)
@@ -328,8 +329,7 @@ public final class RateService implements AutoCloseable
 	/** The most recent scheduled time not after now, within the last day. */
 	Optional<Instant> lastScheduledTime(RateProvider provider, Instant now)
 	{
-		List<LocalTime> times = settings.schedule(provider.id());
-		if(times.isEmpty()) times = provider.defaultSchedule();
+		List<LocalTime> times = settings.schedule(provider.id()).orElse(provider.defaultSchedule());
 		ZonedDateTime local = now.atZone(clock.getZone());
 		Instant best = null;
 		for(LocalDate day : new LocalDate[] { local.toLocalDate(), local.toLocalDate().minusDays(1) })
