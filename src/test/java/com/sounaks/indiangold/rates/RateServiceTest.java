@@ -387,6 +387,22 @@ class RateServiceTest
 	}
 
 	@Test
+	void reloadingPicksUpNewDefinitionsAndKeepsRegisteredProviders(@TempDir Path dataDir) throws Exception
+	{
+		ProviderRegistry registry = ProviderRegistry.load(dataDir);
+		FakeProvider registered = new FakeProvider("registered", 0, Duration.ofMinutes(1));
+		registry.register(registered);
+		Path folder = Files.createDirectories(dataDir.resolve("providers"));
+		Files.writeString(folder.resolve("later.properties"), "id=later\nname=Later\ntype=json-api\nurl=https://x.test/\nmetal.gold.path=/g\n");
+
+		registry.reload();
+
+		assertTrue(registry.find("later").isPresent());
+		assertTrue(registry.find("registered").isPresent());
+		assertEquals(dataDir.resolve("plugins"), registry.pluginsFolder().orElseThrow());
+	}
+
+	@Test
 	void manualPricesUseTheirDateAndCurrency()
 	{
 		TestSettings settings = new TestSettings();

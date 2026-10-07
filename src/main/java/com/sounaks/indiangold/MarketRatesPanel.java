@@ -84,7 +84,7 @@ final class MarketRatesPanel extends JPanel
 		table.getColumnModel().getColumn(1).setPreferredWidth(170);
 		table.getColumnModel().getColumn(2).setPreferredWidth(100);
 		table.getColumnModel().getColumn(3).setPreferredWidth(230);
-		table.setPreferredScrollableViewportSize(new Dimension(560, table.getRowHeight() * 6));
+		table.setPreferredScrollableViewportSize(new Dimension(560, table.getRowHeight() * 8));
 		table.getSelectionModel().addListSelectionListener(e -> {
 			if(!e.getValueIsAdjusting()) showDetails();
 		});
@@ -93,9 +93,27 @@ final class MarketRatesPanel extends JPanel
 		up.addActionListener(e -> move(-1));
 		JButton down = new JButton("Move down");
 		down.addActionListener(e -> move(1));
-		JPanel order = new JPanel(new GridLayout(2, 1, 0, 4));
+		JButton add = new JButton("New...");
+		add.setToolTipText("Add a source: a JSON API or a web page, described without programming");
+		add.addActionListener(e -> newDefinition(DefinitionEditorDialog.blank(), "New source"));
+		JButton duplicate = new JButton("Duplicate...");
+		duplicate.setToolTipText("Start a new source from the selected one");
+		duplicate.addActionListener(e -> duplicate());
+		JButton edit = new JButton("Edit...");
+		edit.addActionListener(e -> editSelected());
+		JButton delete = new JButton("Delete");
+		delete.addActionListener(e -> deleteSelected());
+		JButton plugins = new JButton("Plug-ins folder...");
+		plugins.setToolTipText("<html>Java plug-ins (jar files) put in this folder are loaded at the next start.<br>They run as code on your computer: only use plug-ins you trust.</html>");
+		plugins.addActionListener(e -> openPluginsFolder());
+		JPanel order = new JPanel(new GridLayout(7, 1, 0, 4));
 		order.add(up);
 		order.add(down);
+		order.add(add);
+		order.add(duplicate);
+		order.add(edit);
+		order.add(delete);
+		order.add(plugins);
 		JPanel orderHolder = new JPanel(new BorderLayout());
 		orderHolder.add(order, BorderLayout.NORTH);
 		JPanel list = new JPanel(new BorderLayout(6, 0));
@@ -177,6 +195,138 @@ final class MarketRatesPanel extends JPanel
 		settings.setSources(sources);
 		model.fireTableDataChanged();
 		table.setRowSelectionInterval(target, target);
+	}
+
+	private Optional<ProviderRegistry.Entry> selectedEntry()
+	{
+		int row = table.getSelectedRow();
+		return row < 0 ? Optional.empty() : service.registry().find(sources.get(row).id());
+	}
+
+	private void duplicate()
+	{
+		Optional<ProviderRegistry.Entry> entry = selectedEntry();
+		if(entry.isEmpty()) return;
+		Optional<com.sounaks.indiangold.rates.ProviderDefinition> definition = entry.get().definition();
+		if(definition.isEmpty())
+		{
+			message(entry.get().provider().name() + " is written in Java, so it has no definition to copy.");
+			return;
+		}
+		java.util.Properties copy = definition.get().toProperties();
+		String id = copy.getProperty("id") + "-copy";
+		for(int i = 2; service.registry().find(id).isPresent(); i++) id = copy.getProperty("id") + "-copy" + i;
+		copy.setProperty("id", id);
+		copy.setProperty("name", copy.getProperty("name") + " (copy)");
+		newDefinition(copy, "Duplicate " + entry.get().provider().name());
+	}
+
+	private void newDefinition(java.util.Properties start, String title)
+	{
+		if(DefinitionEditorDialog.edit(owner, title, start, service, settings) == null) return;
+		reloadSources();
+		// the new source is the one the registry did not know before: the last user definition added
+		for(ProviderRegistry.Entry entry : service.registry().entries())
+		{
+			if(entry.origin() == ProviderRegistry.Origin.USER_DEFINITION && sources.stream().noneMatch(s -> s.id().equals(entry.provider().id())))
+			{
+				sources.add(new RateService.SourceChoice(entry.provider().id(), false));
+				int row = sources.size() - 1;
+				settings.setSources(sources);
+				model.fireTableDataChanged();
+				table.setRowSelectionInterval(row, row);
+				setEnabled(row, true);
+			}
+		}
+	}
+
+	private void editSelected()
+	{
+		Optional<ProviderRegistry.Entry> entry = selectedEntry();
+		if(entry.isEmpty()) return;
+		if(entry.get().origin() != ProviderRegistry.Origin.USER_DEFINITION)
+		{
+			message(entry.get().origin() == ProviderRegistry.Origin.PLUGIN || entry.get().definition().isEmpty()
+					? entry.get().provider().name() + " is written in Java and can't be edited here."
+					: entry.get().provider().name() + " is built in and can't be changed. Use \"Duplicate...\" to make your own version.");
+			return;
+		}
+		String oldId = entry.get().provider().id();
+		java.nio.file.Path saved = DefinitionEditorDialog.edit(owner, "Edit " + entry.get().provider().name(),
+				entry.get().definition().orElseThrow().toProperties(), service, settings);
+		if(saved == null) return;
+		String newId = saved.getFileName().toString().replaceFirst("\\.properties$", "");
+		if(!newId.equals(oldId))
+		{
+			try
+			{
+				service.registry().delete(oldId); // the id was changed: the old file would show up as a second source
+			}
+			catch(java.io.IOException | IllegalArgumentException e)
+			{
+				message("The old definition could not be removed: " + e.getMessage());
+			}
+			for(int i = 0; i < sources.size(); i++)
+				if(sources.get(i).id().equals(oldId)) sources.set(i, new RateService.SourceChoice(newId, sources.get(i).enabled()));
+			settings.setSources(sources);
+		}
+		reloadSources();
+	}
+
+	private void deleteSelected()
+	{
+		Optional<ProviderRegistry.Entry> entry = selectedEntry();
+		if(entry.isEmpty()) return;
+		if(entry.get().origin() != ProviderRegistry.Origin.USER_DEFINITION)
+		{
+			message("Only your own sources can be deleted. Built-in ones can be switched off instead.");
+			return;
+		}
+		String id = entry.get().provider().id();
+		if(JOptionPane.showConfirmDialog(owner, "Delete " + entry.get().provider().name() + "?", "Delete source", JOptionPane.OK_CANCEL_OPTION) != JOptionPane.OK_OPTION) return;
+		try
+		{
+			service.registry().delete(id);
+		}
+		catch(java.io.IOException | IllegalArgumentException e)
+		{
+			message("Cannot delete: " + e.getMessage());
+			return;
+		}
+		sources.removeIf(s -> s.id().equals(id));
+		settings.setSources(sources);
+		reloadSources();
+	}
+
+	private void reloadSources()
+	{
+		int row = table.getSelectedRow();
+		service.registry().reload();
+		service.registry().problems().forEach(problem -> System.out.println("Rate source not loaded: " + problem));
+		sources.removeIf(s -> service.registry().find(s.id()).isEmpty());
+		model.fireTableDataChanged();
+		if(!sources.isEmpty()) table.setRowSelectionInterval(Math.min(Math.max(row, 0), sources.size() - 1), Math.min(Math.max(row, 0), sources.size() - 1));
+		showDetails();
+	}
+
+	private void openPluginsFolder()
+	{
+		Optional<java.nio.file.Path> folder = service.registry().pluginsFolder();
+		if(folder.isEmpty()) return;
+		try
+		{
+			java.nio.file.Files.createDirectories(folder.get());
+			if(java.awt.Desktop.isDesktopSupported() && java.awt.Desktop.getDesktop().isSupported(java.awt.Desktop.Action.OPEN))
+			{
+				java.awt.Desktop.getDesktop().open(folder.get().toFile());
+				return;
+			}
+		}
+		catch(java.io.IOException | UnsupportedOperationException e)
+		{
+			// show the path instead
+		}
+		message("<html>Put plug-in jar files in:<br><b>" + RateBar.escape(folder.get().toString()) + "</b><br>They are loaded at the next start.</html>");
 	}
 
 	private void setEnabled(int row, boolean on)

@@ -58,8 +58,13 @@ public final class ProviderRegistry
 	 * @param origin Where it comes from.
 	 * @param file The user's definition file, for USER_DEFINITION.
 	 */
-	public record Entry(RateProvider provider, Origin origin, Optional<Path> file)
+	public record Entry(RateProvider provider, Origin origin, Optional<Path> file, boolean registered)
 	{
+		public Entry(RateProvider provider, Origin origin, Optional<Path> file)
+		{
+			this(provider, origin, file, false);
+		}
+
 		/** The definition behind the provider, if it is defined by one. */
 		public Optional<ProviderDefinition> definition()
 		{
@@ -67,8 +72,9 @@ public final class ProviderRegistry
 		}
 	}
 
-	private final Map<String, Entry> entries = new LinkedHashMap<>();
-	private final List<String> problems = new ArrayList<>();
+	// Replaced as a whole by reload(), so the rate thread always sees a complete set.
+	private volatile Map<String, Entry> entries = new LinkedHashMap<>();
+	private volatile List<String> problems = new ArrayList<>();
 	private final Path dataDir;
 
 	private ProviderRegistry(Path dataDir)
@@ -84,14 +90,35 @@ public final class ProviderRegistry
 	public static ProviderRegistry load(Path dataDir)
 	{
 		ProviderRegistry registry = new ProviderRegistry(dataDir);
-		registry.loadBuiltInDefinitions();
-		registry.loadServices(ProviderRegistry.class.getClassLoader(), Origin.BUILT_IN);
+		registry.reload();
+		return registry;
+	}
+
+	/**
+	 * Loads every provider again, e.g. after the user saved or deleted a definition. Providers added with
+	 * {@link #register(RateProvider)} are kept.
+	 */
+	public synchronized void reload()
+	{
+		Map<String, Entry> registered = new LinkedHashMap<>();
+		entries.forEach((id, entry) -> { if(entry.registered()) registered.put(id, entry); });
+		ProviderRegistry fresh = new ProviderRegistry(dataDir);
+		fresh.loadBuiltInDefinitions();
+		fresh.loadServices(ProviderRegistry.class.getClassLoader(), Origin.BUILT_IN);
 		if(dataDir != null)
 		{
-			registry.loadUserDefinitions(dataDir.resolve(PROVIDERS_FOLDER));
-			registry.loadPlugins(dataDir.resolve(PLUGINS_FOLDER));
+			fresh.loadUserDefinitions(dataDir.resolve(PROVIDERS_FOLDER));
+			fresh.loadPlugins(dataDir.resolve(PLUGINS_FOLDER));
 		}
-		return registry;
+		registered.forEach((id, entry) -> fresh.addEntry(entry, "registered"));
+		entries = fresh.entries;
+		problems = fresh.problems;
+	}
+
+	/** The folder for plug-in jars, ~/.indiangold/plugins/; may not exist yet. */
+	public Optional<Path> pluginsFolder()
+	{
+		return Optional.ofNullable(dataDir).map(dir -> dir.resolve(PLUGINS_FOLDER));
 	}
 
 	private void loadBuiltInDefinitions()
@@ -190,19 +217,26 @@ public final class ProviderRegistry
 
 	private void addProvider(RateProvider provider, Origin origin, Path file, String source)
 	{
-		Entry existing = entries.get(provider.id());
+		addEntry(new Entry(provider, origin, Optional.ofNullable(file)), source);
+	}
+
+	private void addEntry(Entry entry, String source)
+	{
+		Entry existing = entries.get(entry.provider().id());
 		if(existing != null)
 		{
-			problems.add(source + ": the id \"" + provider.id() + "\" is already used by " + existing.provider().name() + "; give it another id.");
+			problems.add(source + ": the id \"" + entry.provider().id() + "\" is already used by " + existing.provider().name() + "; give it another id.");
 			return;
 		}
-		entries.put(provider.id(), new Entry(provider, origin, Optional.ofNullable(file)));
+		entries.put(entry.provider().id(), entry);
 	}
 
 	/** Adds a provider written in Java, e.g. by a test. */
 	void register(RateProvider provider)
 	{
-		addProvider(provider, Origin.PLUGIN, null, provider.getClass().getName());
+		Map<String, Entry> copy = new LinkedHashMap<>(entries);
+		copy.put(provider.id(), new Entry(provider, Origin.PLUGIN, Optional.empty(), true));
+		entries = copy;
 	}
 
 	/** All providers, built-in ones first in their default order. */

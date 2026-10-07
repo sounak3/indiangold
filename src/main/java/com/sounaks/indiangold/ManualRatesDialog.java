@@ -84,16 +84,7 @@ final class ManualRatesDialog extends JDialog
 			NumberField quantity = new NumberField(4, false);
 			quantity.setText(stored.get(ManualProvider.perKey(metal)).orElse(format(shown.quantity())));
 			JComboBox<MassUnit> unit = new JComboBox<>(MassUnit.values());
-			unit.setRenderer(new DefaultListCellRenderer()
-			{
-				private static final long serialVersionUID = 1L;
-
-				@Override
-				public java.awt.Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean selected, boolean focus)
-				{
-					return super.getListCellRendererComponent(list, MarketSettings.unitName((MassUnit)value), index, selected, focus);
-				}
-			});
+			unit.setRenderer(new UnitDisplay.ListRenderer());
 			unit.setSelectedItem(stored.get(ManualProvider.unitKey(metal)).flatMap(MassUnit::fromCode).orElse(massUnitOf(shown)));
 			prices.put(metal, price);
 			quantities.put(metal, quantity);

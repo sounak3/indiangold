@@ -192,7 +192,7 @@ public class RateBar extends JPanel
 		label.setPrice(price, decimals(price, shownCurrency), stale);
 		label.tooltipTemplate = "<html><b>" + escape(title) + "</b>" + (fineness < 1 ? " (" + percent(fineness) + " gold)" : "") + "<br>"
 				+ label.displayRate + " " + shownCurrency + " per " + escape(unit.label()) + "<br>"
-				+ "From " + escape(source) + ", as of " + TIME.format(quote.asOf().atZone(ZoneId.systemDefault()))
+				+ "From " + escape(source) + ", as of " + UnitDisplay.asOf(quote.asOf())
 				+ (stale ? "<br><font color=red>More than two days old</font>" : "")
 				+ (fineness < 1 ? "<br><i>Calculated from the pure gold price; jewellers add premiums and taxes.</i>" : "")
 				+ "<br><br>%HINT%</html>";
