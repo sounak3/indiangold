@@ -34,6 +34,26 @@ Settings, units and the last fetched rates are saved per user in the folder .ind
 (%USERPROFILE%\.indiangold on Windows). A units.dat saved next to the jar by older versions is picked up automatically.
 
 _____________________________________________________
+MARKET RATES
+
+The rate bar shows gold (24K, 22K, 18K and other purities usual in your country), silver, platinum, palladium and
+base metals (copper, aluminium, nickel, zinc, lead, tin) in your currency and units. Click a rate to use it in the
+calculator. At first start you choose your country, which sets the currency, units, gold rows and taxes; all of it
+can be changed in Settings, and "Customize rates..." lets you choose your own units for each group of metals.
+
+Prices come from sources you can switch on, off and reorder in Settings > Market rates:
+  - Gold-API.com (free, no sign-up): live gold, silver, platinum, palladium and copper.
+  - Westmetall (a web page): the official LME prices of base metals and tin, read at most once an hour.
+    Reading web pages automatically may not be allowed by every site's terms; you are asked before it is used.
+  - Currency-API (free, no sign-up): exchange rates for 300+ currencies, updated daily.
+  - Metals.Dev (free key, 100 requests a month): all metals and currencies. Use "Get a free key..." to create an
+    account at metals.dev, then paste the key. IndianGold updates it at times you choose (twice a day by default)
+    and tells you how many updates are left before using one by hand.
+  - Manual entry: type in prices yourself, for example from your jeweller, with their date.
+You can add more sources without programming (Settings > Market rates > New...), or as Java plug-ins.
+Prices are for pure metal; jewellers add premiums, making charges and taxes.
+
+_____________________________________________________
 BUILDING FROM SOURCE
 
 1. Install JDK 21 and Maven, and clone this repository (or open it in NetBeans with File -> Open Project).
