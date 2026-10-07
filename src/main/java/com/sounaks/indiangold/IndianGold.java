@@ -420,16 +420,15 @@ public class IndianGold extends JFrame
         text.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, Boolean.TRUE);
         text.setFont(UIManager.getFont("Label.font"));
         text.addHyperlinkListener(he -> {
-            if(he.getEventType() == javax.swing.event.HyperlinkEvent.EventType.ACTIVATED && Desktop.isDesktopSupported()
-                    && Desktop.getDesktop().isSupported(Desktop.Action.MAIL))
+            if(he.getEventType() == javax.swing.event.HyperlinkEvent.EventType.ACTIVATED)
             {
                 try
                 {
-                    Desktop.getDesktop().mail(he.getURL().toURI());
+                    Links.open(text, he.getURL().toURI());
                 }
-                catch(IOException | java.net.URISyntaxException e)
+                catch(java.net.URISyntaxException e)
                 {
-                    System.out.println("Cannot open the e-mail program: " + e);
+                    System.out.println("Cannot open " + he.getURL() + ": " + e);
                 }
             }
         });
