@@ -61,11 +61,11 @@ IndianGold is a weight and price calculator for gold, silver and other metals, f
 
 In case you want to install the latest release, please download the appropriate OS package and install it. The installers include their own Java runtime:
 
-|  OS  | Download file |
-| ---  | ------------- |
-| Windows | [IndianGold-5.0.msi](https://github.com/sounak3/indiangold/releases/latest/download/IndianGold-5.0.msi) |
-| Ubuntu / Debian | [indiangold_5.0-release_amd64.deb](https://github.com/sounak3/indiangold/releases/latest/download/indiangold_5.0-release_amd64.deb) |
-| Mac OS (Intel; runs on Apple Silicon through Rosetta) | [IndianGold-5.0.dmg](https://github.com/sounak3/indiangold/releases/latest/download/IndianGold-5.0.dmg) |
+|  OS  | Download file | MD5 hash |
+| ---  | ------------- | -------- |
+| Windows | [IndianGold-5.0.msi](https://github.com/sounak3/indiangold/releases/latest/download/IndianGold-5.0.msi) | 9fc7cd7e11fe4a24cb4882d3907b204b |
+| Ubuntu / Debian | [indiangold_5.0-release_amd64.deb](https://github.com/sounak3/indiangold/releases/latest/download/indiangold_5.0-release_amd64.deb) | 73ae8a3958aa1b08fd5c00d11ed5ad8f |
+| Mac OS (Intel; runs on Apple Silicon through Rosetta) | [IndianGold-5.0.dmg](https://github.com/sounak3/indiangold/releases/latest/download/IndianGold-5.0.dmg) | 4c3227d377f05707b45ffc97e40667bb |
 
 In case you're cloning this repository:
 ```bash
