@@ -19,10 +19,6 @@ package com.sounaks.indiangold;
 import java.util.*;
 import java.io.*;
 import java.net.URISyntaxException;
-import java.nio.file.AtomicMoveNotSupportedException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 
 /**
  * Loads and saves the software properties file. The user's copy lives in ~/.indiangold, so saving works
@@ -34,7 +30,14 @@ class FileOperations
 	static final String DATA_DIR_NAME = ".indiangold";
 	static File jarDir; // Folder of the running jar; tests point it at a temp folder.
 
+	/** Where the settings were loaded from at start. */
+	enum Source
+	{
+		USER_FILE, BACKUP, NEXT_TO_JAR, BUNDLED, BUILT_IN_DEFAULTS
+	}
+
 	private Properties props, tmpProps;
+	private Source loadedFrom = Source.BUILT_IN_DEFAULTS;
 	private final String fileName;
 	private final File userFile;
 	private final String header;
@@ -114,8 +117,10 @@ class FileOperations
 		Properties loaded = null;
 		File jarFolder = getJarDir();
 		File[] candidates = { userFile, backupOf(userFile), jarFolder == null ? null : new File(jarFolder, fileName) };
-		for(File candidate : candidates)
+		Source[] sources = { Source.USER_FILE, Source.BACKUP, Source.NEXT_TO_JAR };
+		for(int i = 0; i < candidates.length; i++)
 		{
+			File candidate = candidates[i];
 			if(candidate == null || !candidate.isFile()) continue;
 			try(InputStream in = new BufferedInputStream(new FileInputStream(candidate)))
 			{
@@ -125,13 +130,18 @@ class FileOperations
 			{
 				System.out.println("Cannot read " + candidate + ": " + e);
 			}
-			if(loaded != null) break;
+			if(loaded != null)
+			{
+				loadedFrom = sources[i];
+				break;
+			}
 		}
 		if(loaded == null)
 		{
 			try(InputStream in = FileOperations.class.getResourceAsStream("/" + fileName))
 			{
 				if(in != null) loaded = readUsable(in, "bundled " + fileName);
+				if(loaded != null) loadedFrom = Source.BUNDLED;
 			}
 			catch(IOException e)
 			{
@@ -188,6 +198,15 @@ class FileOperations
 	}
 
         /**
+         * Tells where the settings came from, e.g. to recognize a user of an earlier version.
+         * @return The source the settings were loaded from at start.
+         */
+	Source loadedFrom()
+	{
+		return loadedFrom;
+	}
+
+        /**
          * Gets the file the properties are saved to.
          * @return The properties file in ~/.indiangold.
          */
@@ -202,29 +221,7 @@ class FileOperations
          */
 	static void writeProperties(File file, Properties content, String header) throws IOException
 	{
-		Path target = file.toPath();
-		Files.createDirectories(target.getParent());
-		Path temp = Files.createTempFile(target.getParent(), file.getName(), ".tmp");
-		try
-		{
-			try(OutputStream out = new BufferedOutputStream(Files.newOutputStream(temp)))
-			{
-				content.store(out, header);
-			}
-			if(Files.exists(target)) Files.copy(target, backupOf(file).toPath(), StandardCopyOption.REPLACE_EXISTING);
-			try
-			{
-				Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-			}
-			catch(AtomicMoveNotSupportedException e)
-			{
-				Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING);
-			}
-		}
-		finally
-		{
-			Files.deleteIfExists(temp);
-		}
+		com.sounaks.indiangold.rates.SafeFiles.writeProperties(file.toPath(), content, header);
 	}
 
         /**
@@ -330,6 +327,17 @@ class FileOperations
 	public String getValue(String pName,String pValue)
 	{
 		return props.getProperty(pName, pValue);
+	}
+
+        /**
+         * Checks whether a unit exists in the unit list, checked or not.
+         * @param name The unit name without the * or _ prefix; case does not matter.
+         * @return True if the unit is in the list.
+         */
+	boolean hasUnit(String name)
+	{
+		String key = name.toLowerCase();
+		return props.containsKey("*" + key) || props.containsKey("_" + key);
 	}
         
 	/**

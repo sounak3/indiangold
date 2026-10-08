@@ -28,7 +28,7 @@ pipeline {
                     cp LICENSE.md app/LICENSE.txt
                 '''
                 stash name: 'app', includes: 'app/**'
-                stash name: 'icons', includes: 'extras/IndianGold.ico,extras/IndianGold.png,extras/IndianGold.icns'
+                stash name: 'icons', includes: 'extras/IndianGold.ico,extras/IndianGold.png,extras/IndianGold.icns,extras/linux/**'
                 archiveArtifacts artifacts: 'app/indiangold.jar', fingerprint: true
             }
             post {
@@ -90,7 +90,7 @@ pipeline {
                         }
                         stage('Pack Debian Package') {
                             steps {
-                                sh 'jpackage --input app --name IndianGold --description "Weight and price calculator for Indian units (ratti, tola, bhori) with metal market rates" --vendor "Sounak Choudhury" --copyright "Copyright (C) 2012-2026 Sounak Choudhury" --app-version "$APP_VERSION" --main-jar indiangold.jar --runtime-image jre --type deb --license-file app/LICENSE.txt --icon extras/IndianGold.png --linux-app-category utils --linux-app-release release --linux-menu-group "Utility;Calculator" --linux-shortcut'
+                                sh 'jpackage --input app --name IndianGold --description "Weight and price calculator for Indian units (ratti, tola, bhori) with metal market rates" --vendor "Sounak Choudhury" --copyright "Copyright (C) 2012-2026 Sounak Choudhury" --app-version "$APP_VERSION" --main-jar indiangold.jar --runtime-image jre --type deb --license-file app/LICENSE.txt --icon extras/IndianGold.png --linux-app-category utils --linux-app-release release --linux-menu-group "Utility;Calculator" --linux-shortcut --resource-dir extras/linux --java-options "--add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED"'
                             }
                         }
                         stage('Export DEB') {

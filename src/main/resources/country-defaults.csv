@@ -1,0 +1,255 @@
+# IndianGold country defaults: applied when the user picks a country (first start, or Settings > General).
+# Units: mg g kg t toz lb oz tola tael_hk (37.429 g) tael (37.5 g) baht (15.244 g); qty = the price is per this many units.
+# currency empty = the currency Java knows for the country. purities: label:fineness;... (gold rows derived from pure gold).
+# taxes: name:percent;... (empty = keep the user's own). These are common retail conventions; edit them to taste.
+country,currency,gold_unit,gold_qty,silver_unit,silver_qty,pgm_unit,pgm_qty,base_unit,base_qty,purities,taxes,name
+default,,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Any other country
+AD,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Andorra
+AE,AED,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;21K:0.875;18K:0.750,,United Arab Emirates
+AF,AFN,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Afghanistan
+AG,XCD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Antigua & Barbuda
+AI,XCD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Anguilla
+AL,ALL,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Albania
+AM,AMD,g,1,kg,1,g,1,kg,1,999:0.999;750:0.750;585:0.585,,Armenia
+AO,AOA,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Angola
+AQ,,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Antarctica
+AR,ARS,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Argentina
+AS,USD,toz,1,toz,1,toz,1,lb,1,24K:0.999;22K:0.916;18K:0.750;14K:0.585,,American Samoa
+AT,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Austria
+AU,AUD,toz,1,toz,1,toz,1,kg,1,24K:0.999;22K:0.916;18K:0.750;9K:0.375,,Australia
+AW,AWG,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Aruba
+AX,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Åland Islands
+AZ,AZN,g,1,kg,1,g,1,kg,1,999:0.999;750:0.750;585:0.585,,Azerbaijan
+BA,BAM,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Bosnia & Herzegovina
+BB,BBD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Barbados
+BD,BDT,tola,1,tola,1,g,1,kg,1,22K:0.916;21K:0.875;18K:0.750,,Bangladesh
+BE,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Belgium
+BF,XOF,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Burkina Faso
+BG,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Bulgaria
+BH,BHD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;21K:0.875;18K:0.750,,Bahrain
+BI,BIF,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Burundi
+BJ,XOF,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Benin
+BL,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,St. Barthélemy
+BM,BMD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Bermuda
+BN,BND,g,1,kg,1,g,1,kg,1,999:0.999;916:0.916;750:0.750,,Brunei
+BO,BOB,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Bolivia
+BQ,USD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Caribbean Netherlands
+BR,BRL,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Brazil
+BS,BSD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Bahamas
+BT,BTN,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Bhutan
+BV,NOK,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Bouvet Island
+BW,BWP,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Botswana
+BY,BYN,g,1,kg,1,g,1,kg,1,999:0.999;750:0.750;585:0.585,,Belarus
+BZ,BZD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Belize
+CA,CAD,toz,1,toz,1,toz,1,lb,1,24K:0.999;18K:0.750;14K:0.585;10K:0.417,,Canada
+CC,AUD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Cocos (Keeling) Islands
+CD,CDF,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Congo - Kinshasa
+CF,XAF,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Central African Republic
+CG,XAF,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Congo - Brazzaville
+CH,CHF,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Switzerland
+CI,XOF,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Côte d’Ivoire
+CK,NZD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Cook Islands
+CL,CLP,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Chile
+CM,XAF,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Cameroon
+CN,CNY,g,1,kg,1,g,1,t,1,24K:0.999;18K:0.750,,China
+CO,COP,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Colombia
+CR,CRC,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Costa Rica
+CU,CUP,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Cuba
+CV,CVE,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Cape Verde
+CW,XCG,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Curaçao
+CX,AUD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Christmas Island
+CY,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Cyprus
+CZ,CZK,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Czechia
+DE,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Germany
+DJ,DJF,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Djibouti
+DK,DKK,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Denmark
+DM,XCD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Dominica
+DO,DOP,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Dominican Republic
+DZ,DZD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Algeria
+EC,USD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Ecuador
+EE,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Estonia
+EG,EGP,g,1,kg,1,g,1,kg,1,24K:0.999;21K:0.875;18K:0.750,,Egypt
+EH,MAD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Western Sahara
+ER,ERN,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Eritrea
+ES,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Spain
+ET,ETB,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Ethiopia
+FI,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Finland
+FJ,FJD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Fiji
+FK,FKP,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Falkland Islands
+FM,USD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Micronesia
+FO,DKK,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Faroe Islands
+FR,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,France
+GA,XAF,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Gabon
+GB,GBP,toz,1,toz,1,toz,1,kg,1,24K:0.999;22K:0.916;18K:0.750;9K:0.375,,United Kingdom
+GD,XCD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Grenada
+GE,GEL,g,1,kg,1,g,1,kg,1,999:0.999;750:0.750;585:0.585,,Georgia
+GF,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,French Guiana
+GG,GBP,toz,1,toz,1,toz,1,kg,1,24K:0.999;22K:0.916;18K:0.750;9K:0.375,,Guernsey
+GH,GHS,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Ghana
+GI,GIP,toz,1,toz,1,toz,1,kg,1,24K:0.999;22K:0.916;18K:0.750;9K:0.375,,Gibraltar
+GL,DKK,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Greenland
+GM,GMD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Gambia
+GN,GNF,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Guinea
+GP,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Guadeloupe
+GQ,XAF,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Equatorial Guinea
+GR,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Greece
+GS,GBP,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,South Georgia & South Sandwich Islands
+GT,GTQ,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Guatemala
+GU,USD,toz,1,toz,1,toz,1,lb,1,24K:0.999;22K:0.916;18K:0.750;14K:0.585,,Guam
+GW,XOF,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Guinea-Bissau
+GY,GYD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Guyana
+HK,HKD,tael_hk,1,kg,1,g,1,t,1,999:0.999;916:0.916;750:0.750,,Hong Kong SAR China
+HM,AUD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Heard & McDonald Islands
+HN,HNL,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Honduras
+HR,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Croatia
+HT,HTG,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Haiti
+HU,HUF,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Hungary
+ID,IDR,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Indonesia
+IE,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Ireland
+IL,ILS,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Israel
+IM,GBP,toz,1,toz,1,toz,1,kg,1,24K:0.999;22K:0.916;18K:0.750;9K:0.375,,Isle of Man
+IN,INR,g,10,kg,1,g,10,kg,1,24K:0.999;22K:0.916;18K:0.750,CGST:1.5;SGST:1.5,India
+IO,USD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,British Indian Ocean Territory
+IQ,IQD,g,1,kg,1,g,1,kg,1,24K:0.999;21K:0.875;18K:0.750,,Iraq
+IR,IRR,g,1,kg,1,g,1,kg,1,24K:0.999;21K:0.875;18K:0.750,,Iran
+IS,ISK,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Iceland
+IT,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Italy
+JE,GBP,toz,1,toz,1,toz,1,kg,1,24K:0.999;22K:0.916;18K:0.750;9K:0.375,,Jersey
+JM,JMD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Jamaica
+JO,JOD,g,1,kg,1,g,1,kg,1,24K:0.999;21K:0.875;18K:0.750,,Jordan
+JP,JPY,g,1,g,1,g,1,kg,1,K24:0.999;K18:0.750,,Japan
+KE,KES,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Kenya
+KG,KGS,g,1,kg,1,g,1,kg,1,999:0.999;750:0.750;585:0.585,,Kyrgyzstan
+KH,KHR,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Cambodia
+KI,AUD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Kiribati
+KM,KMF,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Comoros
+KN,XCD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,St. Kitts & Nevis
+KP,KPW,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,North Korea
+KR,KRW,g,3.75,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,South Korea
+KW,KWD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;21K:0.875;18K:0.750,,Kuwait
+KY,KYD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Cayman Islands
+KZ,KZT,g,1,kg,1,g,1,kg,1,999:0.999;750:0.750;585:0.585,,Kazakhstan
+LA,LAK,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Laos
+LB,LBP,g,1,kg,1,g,1,kg,1,24K:0.999;21K:0.875;18K:0.750,,Lebanon
+LC,XCD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,St. Lucia
+LI,CHF,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Liechtenstein
+LK,LKR,g,8,kg,1,g,1,kg,1,24K:0.999;22K:0.916,,Sri Lanka
+LR,LRD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Liberia
+LS,LSL,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Lesotho
+LT,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Lithuania
+LU,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Luxembourg
+LV,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Latvia
+LY,LYD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Libya
+MA,MAD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Morocco
+MC,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Monaco
+MD,MDL,g,1,kg,1,g,1,kg,1,999:0.999;750:0.750;585:0.585,,Moldova
+ME,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Montenegro
+MF,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,St. Martin
+MG,MGA,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Madagascar
+MH,USD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Marshall Islands
+MK,MKD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,North Macedonia
+ML,XOF,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Mali
+MM,MMK,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Myanmar (Burma)
+MN,MNT,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Mongolia
+MO,MOP,tael_hk,1,kg,1,g,1,t,1,999:0.999;916:0.916;750:0.750,,Macao SAR China
+MP,USD,toz,1,toz,1,toz,1,lb,1,24K:0.999;22K:0.916;18K:0.750;14K:0.585,,Northern Mariana Islands
+MQ,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Martinique
+MR,MRU,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Mauritania
+MS,XCD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Montserrat
+MT,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Malta
+MU,MUR,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Mauritius
+MV,MVR,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Maldives
+MW,MWK,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Malawi
+MX,MXN,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Mexico
+MY,MYR,g,1,kg,1,g,1,kg,1,999:0.999;916:0.916;750:0.750,,Malaysia
+MZ,MZN,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Mozambique
+NA,NAD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Namibia
+NC,XPF,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,New Caledonia
+NE,XOF,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Niger
+NF,AUD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Norfolk Island
+NG,NGN,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Nigeria
+NI,NIO,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Nicaragua
+NL,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Netherlands
+NO,NOK,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Norway
+NP,NPR,tola,1,tola,1,g,1,kg,1,24K:0.999;22K:0.916,,Nepal
+NR,AUD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Nauru
+NU,NZD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Niue
+NZ,NZD,toz,1,toz,1,toz,1,kg,1,24K:0.999;22K:0.916;18K:0.750;9K:0.375,,New Zealand
+OM,OMR,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;21K:0.875;18K:0.750,,Oman
+PA,PAB,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Panama
+PE,PEN,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Peru
+PF,XPF,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,French Polynesia
+PG,PGK,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Papua New Guinea
+PH,PHP,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Philippines
+PK,PKR,tola,1,tola,1,g,1,kg,1,24K:0.999;22K:0.916;21K:0.875;18K:0.750,,Pakistan
+PL,PLN,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Poland
+PM,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,St. Pierre & Miquelon
+PN,NZD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Pitcairn Islands
+PR,USD,toz,1,toz,1,toz,1,lb,1,24K:0.999;22K:0.916;18K:0.750;14K:0.585,,Puerto Rico
+PS,ILS,g,1,kg,1,g,1,kg,1,24K:0.999;21K:0.875;18K:0.750,,Palestinian Territories
+PT,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Portugal
+PW,USD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Palau
+PY,PYG,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Paraguay
+QA,QAR,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;21K:0.875;18K:0.750,,Qatar
+RE,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Réunion
+RO,RON,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Romania
+RS,RSD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Serbia
+RU,RUB,g,1,kg,1,g,1,kg,1,999:0.999;750:0.750;585:0.585,,Russia
+RW,RWF,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Rwanda
+SA,SAR,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;21K:0.875;18K:0.750,,Saudi Arabia
+SB,SBD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Solomon Islands
+SC,SCR,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Seychelles
+SD,SDG,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Sudan
+SE,SEK,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Sweden
+SG,SGD,g,1,kg,1,g,1,kg,1,999:0.999;916:0.916;750:0.750,,Singapore
+SH,SHP,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,St. Helena
+SI,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Slovenia
+SJ,NOK,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Svalbard & Jan Mayen
+SK,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Slovakia
+SL,SLE,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Sierra Leone
+SM,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,San Marino
+SN,XOF,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Senegal
+SO,SOS,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Somalia
+SR,SRD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Suriname
+SS,SSP,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,South Sudan
+ST,STN,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,São Tomé & Príncipe
+SV,SVC,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,El Salvador
+SX,XCG,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Sint Maarten
+SY,SYP,g,1,kg,1,g,1,kg,1,24K:0.999;21K:0.875;18K:0.750,,Syria
+SZ,SZL,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Eswatini
+TC,USD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Turks & Caicos Islands
+TD,XAF,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Chad
+TF,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,French Southern Territories
+TG,XOF,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Togo
+TH,THB,baht,1,kg,1,g,1,kg,1,96.5%:0.965;99.99%:0.9999,,Thailand
+TJ,TJS,g,1,kg,1,g,1,kg,1,999:0.999;750:0.750;585:0.585,,Tajikistan
+TK,NZD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Tokelau
+TL,USD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Timor-Leste
+TM,TMT,g,1,kg,1,g,1,kg,1,999:0.999;750:0.750;585:0.585,,Turkmenistan
+TN,TND,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Tunisia
+TO,TOP,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Tonga
+TR,TRY,g,1,kg,1,g,1,kg,1,24K:0.995;22K:0.916;18K:0.750;14K:0.585,,Türkiye
+TT,TTD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Trinidad & Tobago
+TV,AUD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Tuvalu
+TW,TWD,tael,1,kg,1,g,1,t,1,24K:0.999;18K:0.750,,Taiwan
+TZ,TZS,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Tanzania
+UA,UAH,g,1,kg,1,g,1,kg,1,999:0.999;750:0.750;585:0.585,,Ukraine
+UG,UGX,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Uganda
+UM,USD,toz,1,toz,1,toz,1,lb,1,24K:0.999;22K:0.916;18K:0.750;14K:0.585,,U.S. Outlying Islands
+US,USD,toz,1,toz,1,toz,1,lb,1,24K:0.999;22K:0.916;18K:0.750;14K:0.585,,United States
+UY,UYU,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Uruguay
+UZ,UZS,g,1,kg,1,g,1,kg,1,999:0.999;750:0.750;585:0.585,,Uzbekistan
+VA,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750;14K:0.585,,Vatican City
+VC,XCD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,St. Vincent & Grenadines
+VE,VES,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Venezuela
+VG,USD,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,British Virgin Islands
+VI,USD,toz,1,toz,1,toz,1,lb,1,24K:0.999;22K:0.916;18K:0.750;14K:0.585,,U.S. Virgin Islands
+VN,VND,tael,1,kg,1,g,1,kg,1,24K:0.999;18K:0.750,,Vietnam
+VU,VUV,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Vanuatu
+WF,XPF,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Wallis & Futuna
+WS,WST,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Samoa
+YE,YER,g,1,kg,1,g,1,kg,1,24K:0.999;21K:0.875;18K:0.750,,Yemen
+YT,EUR,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Mayotte
+ZA,ZAR,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,South Africa
+ZM,ZMW,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Zambia
+ZW,ZWG,g,1,kg,1,g,1,kg,1,24K:0.999;22K:0.916;18K:0.750,,Zimbabwe

@@ -47,18 +47,18 @@ The `app/` folder is jpackage's `--input`, and everything in it ships inside the
 
 | File in installer | Source in repo |
 |---|---|
-| `indiangold.jar` | `target/indiangold.jar` (shaded jar with jsoup, built by Maven). It also contains the default `units.dat`. |
+| `indiangold.jar` | `target/indiangold.jar` (shaded jar with jsoup and Gson, built by Maven). It also contains the default `units.dat`. |
 | `LICENSE.txt` | `LICENSE.md` (GPL v3, renamed as jpackage's license file) |
 
 Icons come from `extras/` (`IndianGold.ico` for Windows, `IndianGold.png` for Linux, `IndianGold.icns` for macOS) and are passed with `--icon`, so they are not copied into `app/`. They are generated from `extras/IndianGold-icon.png` (1024×1024, drawn by `extras/DrawIcon.java`) with `extras/create-icons.sh`, which needs ImageMagick and python3. Pass `--redraw` to redraw the master image first.
 
 #### The minimal runtime
 
-Each agent builds a runtime with `jlink`, containing the modules `jdeps` finds in the jar plus two it can't see:
+Each agent builds a runtime with `jlink`, containing the modules `jdeps` finds in the jar (currently `java.base`, `java.desktop`, `java.net.http` and `java.sql`, the last for Gson) plus two it can't see:
 
 | Module | Why |
 |---|---|
-| `jdk.crypto.ec` | Elliptic-curve TLS. Without it the HTTPS rate fetch fails with `Received close_notify during handshake`. |
+| `jdk.crypto.ec` | Elliptic-curve TLS. Without it HTTPS requests to the rate sources fail with `Received close_notify during handshake`. |
 | `jdk.localedata` | Number formats for non-English locales (for example `1.234.567,89` in German, Bengali digits), so the installed app formats like `java -jar` on a full JDK. Adds about 11 MB. |
 
 They are set once, in `EXTRA_MODULES` at the top of the `Jenkinsfile`. `jdeps` runs with `--multi-release 21` because jsoup is a multi-release jar, and with `--ignore-missing-deps` because jsoup refers to optional `org.jspecify` annotations that aren't on the classpath. jsoup's `module-info.class` is filtered out of the shaded jar, so jdeps treats it as a plain classpath jar.
@@ -71,7 +71,7 @@ They are set once, in `EXTRA_MODULES` at the top of the `Jenkinsfile`. `jdeps` r
 | Vendor | Sounak Choudhury |
 | Description | Weight and price calculator for Indian units (ratti, tola, bhori) with metal market rates |
 | Windows | `--win-dir-chooser --win-menu --win-menu-group IndianGold --win-shortcut` |
-| Linux | `--linux-app-category utils --linux-menu-group "Utility;Calculator" --linux-shortcut` |
+| Linux | `--linux-app-category utils --linux-menu-group "Utility;Calculator" --linux-shortcut --resource-dir extras/linux --java-options "--add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED"`: the desktop entry from `extras/linux/IndianGold.desktop` adds `StartupWMClass=IndianGold`, and the option lets the app set that window class (see *Dock and taskbar* below) |
 | macOS | `--mac-app-category finance --mac-package-name IndianGold` |
 
 The Jenkinsfile is the only packaging definition. There is no jpackage configuration in `pom.xml`.
@@ -82,8 +82,15 @@ Everything the app writes is per user, in `~/.indiangold/` (`%USERPROFILE%\.indi
 
 | File | Contents |
 |---|---|
-| `units.dat` | Units and their milligram values, the last fetched metal rates, and all settings (currency, taxes, rate bar, decimals) as a Java properties file |
+| `units.dat` | Units and their milligram values and all settings as a Java properties file: country, currency, taxes, display options, the units rates are shown in, gold purity rows, the rate sources (order, on/off) and each source's own settings, including **API keys in plain text** (the file is readable only by the user) |
 | `units.dat.bak` | The previous version of `units.dat` |
+| `rates.properties` (+ `.bak`) | The last prices and exchange rates from each source, errors, and request counts for sources with a monthly quota, so the rate bar works offline and at start |
+| `plugins/*.jar` | Optional plug-ins with more rate sources (see [docs/PLUGINS.md](docs/PLUGINS.md)); loaded at start and by "Reload plug-ins" |
+| `indiangold.png` | The icon for the Linux desktop entry below |
+
+The calculator's last weight, rate, units, making charge and discount are saved in `units.dat` (`$last.*`) when the window closes, and restored at start.
+
+On Linux, when the plain jar runs (not an installed package), the app also writes `~/.local/share/applications/indiangold.desktop`, pointing at the running jar, so docks can show the window and the app can be pinned.
 
 On start, the first usable file of these is loaded:
 
@@ -93,7 +100,32 @@ On start, the first usable file of these is loaded:
 4. The default `units.dat` bundled in the jar
 5. Two built-in units (troy ounce and pound)
 
+Version 4.x kept the last metal prices in `units.dat` (`@gold=…` in USD per troy ounce, base metals per pound); on the first start of 5.0 they move to `rates.properties`.
+
 A file that can't be parsed, or has no units (as an interrupted save would leave it), is skipped. Loading never writes a file. Saves always go to `~/.indiangold`: a temp file is written and then swapped in, after the old file is copied to `.bak`, so a crash can't leave a truncated file. Running `java -jar indiangold.jar` from any folder therefore works, including a read-only install folder.
+
+## Market rate sources
+
+The rate bar gets its prices from pluggable sources, in `com.sounaks.indiangold.rates`:
+
+| Source | Kind | Key | Metals | Notes |
+|---|---|---|---|---|
+| Gold-API.com | JSON API | none | gold, silver, platinum, palladium, copper (COMEX, per lb) | live; one request per metal, so at most every 5 minutes; "no rate limiting", commercial use allowed |
+| Westmetall | web page | none | LME copper, aluminium, nickel, zinc, lead, tin | official LME cash prices, published once a day; read at most hourly where robots.txt allows; the user accepts a disclaimer first |
+| Currency-API (fawazahmed0) | JSON API | none | gold, silver, platinum, palladium + exchange rates for 300+ currencies | daily; jsDelivr with a Cloudflare Pages mirror; public domain |
+| Metals.Dev | JSON API | the user's own | all 9 metals + 170 currencies in one request | free plan: 100 requests a month, one account per person; scheduled at 10:30 and 16:30 by default |
+| Manual entry | Java | – | any | prices typed in with a date |
+
+For each metal the first enabled source (in the user's order) with a price less than 48 hours old wins. Sources with a monthly quota run only at their scheduled times (up to three a day, with one catch-up at start), and today's share is the remaining quota divided by the days left in the month; manual refreshes show it and ask first. Gold rows such as 22K are pure gold × fineness, so they work with every source.
+
+**Adding a source:**
+
+- *As a plug-in* (by anyone, without a new release): a jar in `~/.indiangold/plugins/` with definition files (`type=json-api` reads values with JSON pointers, `type=web-page` with CSS selectors) and/or Java classes implementing `RateProvider`. The developer guide is [docs/PLUGINS.md](docs/PLUGINS.md); the app links to it from Settings → Market rates ("How to write a plug-in"), and `PluginsTest` builds both kinds the way the guide describes.
+- *Built in:* add a definition to `src/main/resources/providers/` and to `providers/index.list` (the order is the default priority), or a Java class listed in `src/main/resources/META-INF/services/com.sounaks.indiangold.rates.RateProvider`, plus a test against a recorded response in `ProvidersTest`.
+
+Rules every source follows: web pages are fetched at most once an hour, only where robots.txt allows it, and the User-Agent is always `IndianGold/<version> (+https://github.com/sounak3/indiangold)`. **Never make a source pose as a browser** to get past a site's blocking; goodreturns.in was left out for that reason. kitco.com and goldprice.org were left out because their terms forbid automated access.
+
+Country defaults (currency, the unit for each metal group, gold rows, taxes) come from `src/main/resources/country-defaults.csv`; legacy and non-ISO currency codes are mapped in `currency-migrations.properties`.
 
 ## Parameters
 
@@ -155,9 +187,17 @@ A single Maven build writes the jar more than once (the shade plugin replaces it
 
 Because of this trigger, don't run `mvn package` in the working copy unless you want the jar pushed to all three machines. Experiment in a copy instead (`rsync` without `target` and `.git`).
 
+## Dock and taskbar
+
+Linux docks show a running window only when they can match its window class to a `.desktop` file. Java names the class after the main class (`com-sounaks-indiangold-IndianGold`), so the window used to be missing from the dock, also when minimized. `DesktopIntegration` now sets the class to `IndianGold` (this needs `java.desktop/sun.awt.X11` opened: the jar's manifest has `Add-Opens`, the installed app gets `--add-opens`). The installed desktop entry says `StartupWMClass=IndianGold`, and plain-jar runs write their own entry (see *Where the app stores its data*). Windows carry the icon in 16–256 px; on macOS the dock icon is set with `java.awt.Taskbar`.
+
+Some docks only show pinned apps (on dell5558, Dash2Dock Lite did not show GNOME Calculator either while it ran); there, pin IndianGold from the app grid.
+
+**Never use `java.awt.Desktop` or `java.awt.Taskbar` on Linux.** They load GTK into the app's process; started from a snap-packaged program (e.g. VS Code), GTK then loads the snap's libraries and the app dies with `symbol lookup error ... __libc_pthread_init`. `Links` opens pages, folders and mail with `xdg-open` in a separate process instead, without the snap's environment variables.
+
 ## Known issues and recommendations
 
-1. **The precious and base metal rates are broken.** `RateBar` scrapes kitco.com and kitcometals.com. kitco's page now has 6 tables, so `doc.select("table").get(32)` throws `IndexOutOfBoundsException` on the timer thread, and kitcometals.com redirects to kitco with nothing the scraper matches. The USD conversion from x-rates.com still works. The fix needs a new rate source, and the fetch should move off the Swing event thread; it is planned as separate work.
+1. **Free sources can change or disappear.** Gold-API.com and Currency-API are provided "as is", and a web page source breaks when the site is redesigned. The rate bar keeps the last prices (greyed after 48 hours), the source's status shows the error, and other sources fill in; a broken definition can be fixed in the editor without a new release.
 2. **Publishing is manual.** Jenkins only archives the installers. Uploading them to GitHub Releases happens outside Jenkins.
 3. **Installers are unsigned.** The MSI has no Authenticode signature (Windows SmartScreen will warn). The DMG is not notarized; open it with right-click → *Open*.
 4. **The DMG is Intel-only,** because the `mac` agent has an Intel JDK. Apple Silicon Macs run it through Rosetta.
