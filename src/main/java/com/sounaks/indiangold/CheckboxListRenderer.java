@@ -23,7 +23,7 @@ package com.sounaks.indiangold;
 import javax.swing.*;
 import java.awt.*;
 
-public class CheckboxListRenderer extends JCheckBox implements ListCellRenderer
+public class CheckboxListRenderer extends JCheckBox implements ListCellRenderer<Object>
 {
 	public CheckboxListRenderer()
 	{
@@ -37,7 +37,7 @@ public class CheckboxListRenderer extends JCheckBox implements ListCellRenderer
         }
         
         @Override
-	public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean hasFocus)
+	public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean hasFocus)
 	{
 		setEnabled(list.isEnabled());
 		setSelected(((CheckableItem)value).isSelected());
@@ -55,4 +55,22 @@ public class CheckboxListRenderer extends JCheckBox implements ListCellRenderer
 		}
 		return this;
 	}
+
+        /**
+         * Checks whether a point in the list is on the check box of a unit, as opposed to its name or empty space.
+         * Only clicks on the check box toggle a unit; a click on the name just selects it.
+         * @param list The unit list.
+         * @param point The clicked point, in list coordinates.
+         * @return True if the point is on the check box of a list entry.
+         */
+        static boolean isOnCheckBox(JList<?> list, Point point)
+        {
+            int index = list.locationToIndex(point);
+            if(index < 0) return false;
+            Rectangle cell = list.getCellBounds(index, index);
+            if(cell == null || !cell.contains(point)) return false;
+            Icon box = UIManager.getIcon("CheckBox.icon");
+            int boxWidth = (box == null ? 16 : box.getIconWidth()) + new JCheckBox().getInsets().left + 4;
+            return point.x - cell.x < boxWidth;
+        }
 }

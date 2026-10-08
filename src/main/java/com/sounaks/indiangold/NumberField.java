@@ -23,88 +23,67 @@ package com.sounaks.indiangold;
  *
  * @author Sounak Choudhury
  */
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyAdapter;
+import java.util.regex.Pattern;
 import javax.swing.JTextField;
+import javax.swing.UIManager;
+import javax.swing.text.AbstractDocument;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.DocumentFilter;
 
 public class NumberField extends JTextField
 {
+    private static final Pattern NUMBER = Pattern.compile("\\d*(\\.\\d*)?");
+    private static final Pattern NUMBER_OR_PERCENT = Pattern.compile("\\d*(\\.\\d*)?%?");
     boolean percentAllowed;
+
     public NumberField(int width, boolean percentAllowed)
     {
         super(width);
         super.setHorizontalAlignment(RIGHT );
-        super.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyTyped(KeyEvent e)
-            {
-                char c = e.getKeyChar();				
-                String ss= getText();
-                if((c == '.') && (ss.length()== 0))
-                {
-                    setText("0");
-                }
-                else if((c == '.') && (ss.length() > 0))
-                {
-                    if(ss.contains(".") || (ss.contains("%") && percentAllowed))
-                    {
-                        getToolkit().beep();
-                        e.consume();
-                    }
-                }
-                else if((c == '%') && percentAllowed && (ss.length() > 0))
-                {
-                    if(ss.contains("%"))
-                    {
-                        getToolkit().beep();
-                        e.consume();
-                    }
-                }
-                else if (!((c >= '0') && (c <= '9') 
-                        || (c == KeyEvent.VK_BACK_SPACE) 
-                        || (c == KeyEvent.VK_DELETE) 
-                        || (c == KeyEvent.VK_ENTER))
-                        || ss.endsWith("%"))
-                {
-                    getToolkit().beep();
-                    e.consume();
-                }
-            }
-
-            @Override
-            public void keyPressed(KeyEvent e) {}
-
-            @Override
-            public void keyReleased(KeyEvent e)
-            {
-                char c = e.getKeyChar();
-                if((c == KeyEvent.VK_TAB) || (c == KeyEvent.VK_ENTER))
-                {
-                    if(getText().startsWith(".")) setText("0"+getText());
-                }
-            }
-            
-        });
         this.percentAllowed = percentAllowed;
+        // A document filter sees typing, pasting and setText alike; a key listener missed pasted text.
+        ((AbstractDocument)getDocument()).setDocumentFilter(new DocumentFilter() {
+            @Override
+            public void insertString(FilterBypass fb, int offset, String text, AttributeSet attr) throws BadLocationException
+            {
+                replace(fb, offset, 0, text, attr);
+            }
+
+            @Override
+            public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs) throws BadLocationException
+            {
+                String current = fb.getDocument().getText(0, fb.getDocument().getLength());
+                String result = current.substring(0, offset) + (text == null ? "" : text) + current.substring(offset + length);
+                if(isAllowed(result)) fb.replace(offset, length, text, attrs);
+                else UIManager.getLookAndFeel().provideErrorFeedback(NumberField.this);
+            }
+
+            @Override
+            public void remove(FilterBypass fb, int offset, int length) throws BadLocationException
+            {
+                String current = fb.getDocument().getText(0, fb.getDocument().getLength());
+                if(isAllowed(current.substring(0, offset) + current.substring(offset + length))) fb.remove(offset, length);
+                else UIManager.getLookAndFeel().provideErrorFeedback(NumberField.this);
+            }
+        });
+    }
+
+    private boolean isAllowed(String text)
+    {
+        return (percentAllowed ? NUMBER_OR_PERCENT : NUMBER).matcher(text).matches();
     }
 
     /**
-     * Private method to parse the number out of the number text fields. 
-     * @return Parsed double number from the text field.
+     * Private method to parse the number out of the number text fields.
+     * @return Parsed double number from the text field; an empty or incomplete entry such as "." counts as 0.
      */
-    public double getNumberInput() throws NumberFormatException
+    public double getNumberInput()
     {
-        double input;
-        String fullText = this.getText();
-        if(fullText == null || fullText.equals(""))
-            fullText = "0.0";
-        if(fullText.contains("%") && !fullText.endsWith("%"))
-            throw new NumberFormatException("Percent sign in middle of number.");
-        else if(fullText.endsWith("%"))
-            input=Double.parseDouble(fullText.substring(0, fullText.length()-1));
-        else
-            input=Double.parseDouble(fullText);
-        return input;
+        String number = this.getText();
+        if(number.endsWith("%")) number = number.substring(0, number.length()-1);
+        if(number.isEmpty() || number.equals(".")) return 0.0;
+        return Double.parseDouble(number);
     }
 
     /**

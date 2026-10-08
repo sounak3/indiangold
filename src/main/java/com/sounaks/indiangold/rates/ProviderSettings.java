@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Sounak
+ * Copyright (C) 2026 Sounak Choudhury
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,47 +14,25 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.sounaks.indiangold;
+package com.sounaks.indiangold.rates;
+
+import java.util.Optional;
 
 /**
- *
+ * The settings the user made for one provider, such as its API key. Saved with the app's other settings.
  * @author Sounak Choudhury
  */
-import javax.swing.*;
-
-public class CurrencyComboModel extends AbstractListModel implements ComboBoxModel
+public interface ProviderSettings
 {
-	CurrencyCode cCode;
-	String itemList[];
+	/** Setting name of the API key. */
+	String API_KEY = "apikey";
 
-    @Override
-	public Object getElementAt(int index)
-	{
-		return itemList[index];
-	}
+	Optional<String> get(String name);
 
-    @Override
-	public int getSize()
-	{
-		return cCode.size();
-	}
+	void put(String name, String value);
 
-	public CurrencyComboModel()
+	default Optional<String> apiKey()
 	{
-		super();
-		cCode = new CurrencyCode("INR");
-		itemList = cCode.getCurrencyList();
-	}
-
-    @Override
-	public void setSelectedItem(Object anItem)
-	{
-		cCode.setName((String)anItem);
-	}
-
-    @Override
-	public Object getSelectedItem()
-	{
-		return cCode.getCode();
+		return get(API_KEY).map(String::trim).filter(key -> !key.isEmpty());
 	}
 }

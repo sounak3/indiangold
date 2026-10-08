@@ -24,16 +24,22 @@ package com.sounaks.indiangold;
  * @author Sounak Choudhury
  */
 import com.sounaks.indiangold.RateBar.RateLabel;
+import com.sounaks.indiangold.rates.HttpFetcher;
+import com.sounaks.indiangold.rates.ProviderRegistry;
+import com.sounaks.indiangold.rates.RateService;
+import com.sounaks.indiangold.rates.RateStore;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.text.DecimalFormat;
 import java.util.Currency;
+import java.util.Properties;
 import java.util.Vector;
-import javax.imageio.ImageIO;
 import javax.swing.*;
+import javax.swing.border.Border;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.text.SimpleAttributeSet;
@@ -54,12 +60,15 @@ public class IndianGold extends JFrame
     NumberField weightField, rateField, noOfUnitsField, makingChargeField, discountField, numTax1Field, numTax2Field, numTax3Field;
     JTextField labelTax1EditField, labelTax2EditField, labelTax3EditField;
     JTable table1;
-    JComboBox weightUnitCombo1, weightUnitCombo2, discountOnCombo3;
+    JComboBox<String> weightUnitCombo1, weightUnitCombo2, discountOnCombo3;
     DecimalFormat formatter;
     DefaultTableModel model;
     JButton abtButton, setButton, taxButton, rateBarButton, ok1, ok2;
     JScrollPane spane;
     RateBar ratePane;
+    MarketSettings marketSettings;
+    RateService rateService;
+    private final boolean existingUser;
     Currency currency;
     ShowHideAdapter shAdapter;
     CardAdapter cAdapter;
@@ -67,29 +76,115 @@ public class IndianGold extends JFrame
     PrivateActionAdapter aAdapter;
     private final JPanel mainPane, p12, p32, rp320, rp321, rp322;
     private final CardLayout cards;
+    private final Border padding = BorderFactory.createEmptyBorder(2, 5, 2, 5);
     boolean nowcard = true;
     boolean taxBoxActivated = false;
-    public static final String NAME_STRING_FULL = "Indian Gold v4.0";
-    public static  final String NAME_STRING_MEDIUM = "IndianGold4.0";
-    public static  final String NAME_STRING_SHORT = "IGv4";
+    public static final String VERSION = readVersion();
+    public static final String NAME_STRING_FULL = "Indian Gold v" + VERSION;
+    public static  final String NAME_STRING_MEDIUM = "IndianGold" + VERSION;
+    public static  final String NAME_STRING_SHORT = "IGv" + VERSION.split("\\.")[0];
 
     /**
-     * Internal method to make the sentence to be displayed in the price panel.
-     * @return A string to be displayed in the price panel.
+     * Reads the version Maven wrote into indiangold-version.properties, so pom.xml stays the only place it is set.
+     * @return The pom version without -SNAPSHOT, or "dev" when the resource was not filtered by Maven.
      */
-    private String getCostString(String cost, String mkCharge, String discount, String gstPercent, String gst, String total)
+    static String readVersion()
     {
-        String currSymbol = currency.getSymbol();
-        String costString = "Total: " + currSymbol + " " + total + ". (Base price: " + currSymbol + " " 
-                + cost + ", Making charge: " + currSymbol + " " + mkCharge + ", Discount: " + currSymbol 
-                + " " + discount + " and Taxes " + gstPercent + "%: " + currSymbol + " " + gst + ")";
-        
-        return costString;
+        Properties versionProps = new Properties();
+        try (InputStream in = IndianGold.class.getResourceAsStream("/indiangold-version.properties"))
+        {
+            if(in != null) versionProps.load(in);
+        }
+        catch(IOException e)
+        {
+            System.out.println("Cannot read version: " + e);
+        }
+        String version = versionProps.getProperty("version", "").replace("-SNAPSHOT", "");
+        return version.isEmpty() || version.startsWith("${") ? "dev" : version;
     }
-    
-    private String getCostString()
+
+    /**
+     * Internal method to show the price in the price panel: the total in red, and the breakup in brackets with the
+     * names in black and the amounts in dark gray.
+     */
+    private void showCost(String cost, String mkCharge, String discount, String gstPercent, String gst, String total)
     {
-        return getCostString(localeZero(), localeZero(), localeZero(), localeZero(), localeZero(), localeZero());
+        String symbol = currency.getSymbol() + " ";
+        javax.swing.text.StyledDocument doc = costArea.getStyledDocument();
+        SimpleAttributeSet totalStyle = new SimpleAttributeSet();
+        StyleConstants.setForeground(totalStyle, Color.red);
+        StyleConstants.setBold(totalStyle, true);
+        SimpleAttributeSet nameStyle = new SimpleAttributeSet();
+        StyleConstants.setForeground(nameStyle, Color.black);
+        StyleConstants.setBold(nameStyle, false); // only the total is bold
+        SimpleAttributeSet valueStyle = new SimpleAttributeSet();
+        StyleConstants.setForeground(valueStyle, new Color(96, 96, 96)); // dark gray, clearly apart from the black names
+        StyleConstants.setBold(valueStyle, false);
+        String[][] parts = {
+            { "Total: " + symbol + total + ".", null },
+            { " (Base price: ", symbol + cost },
+            { ", Making charge: ", symbol + mkCharge },
+            { ", Discount: ", symbol + discount },
+            { " and Taxes " + gstPercent + "%: ", symbol + gst },
+            { ")", null } };
+        try
+        {
+            doc.remove(0, doc.getLength());
+            for(int i = 0; i < parts.length; i++)
+            {
+                doc.insertString(doc.getLength(), parts[i][0], i == 0 ? totalStyle : nameStyle);
+                if(parts[i][1] != null) doc.insertString(doc.getLength(), parts[i][1], valueStyle);
+            }
+        }
+        catch(javax.swing.text.BadLocationException e)
+        {
+            costArea.setText("Total: " + symbol + total);
+        }
+    }
+
+    private void showCost()
+    {
+        showCost(localeZero(), localeZero(), localeZero(), localeZero(), localeZero(), localeZero());
+    }
+
+    /**
+     * Saves what the calculator shows (weight, rate, units, making charge, discount), so it is there again at the
+     * next start.
+     */
+    void saveCalculator()
+    {
+        fOps.setValue("$last.weight", weightField.getText());
+        fOps.setValue("$last.weightunit", String.valueOf(weightUnitCombo1.getSelectedItem()));
+        fOps.setValue("$last.rate", rateField.getText());
+        fOps.setValue("$last.per", noOfUnitsField.getText());
+        fOps.setValue("$last.rateunit", String.valueOf(weightUnitCombo2.getSelectedItem()));
+        fOps.setValue("$last.making", makingChargeField.getText());
+        fOps.setValue("$last.discount", discountField.getText());
+        fOps.setValue("$last.discounton", String.valueOf(discountOnCombo3.getSelectedItem()));
+        fOps.saveToFile();
+    }
+
+    /** Puts back what the calculator showed when the app was last closed. */
+    private void restoreCalculator()
+    {
+        if(fOps.getValue("$last.rateunit", null) == null) return;
+        weightField.setText(fOps.getValue("$last.weight", ""));
+        rateField.setText(fOps.getValue("$last.rate", rateField.getText()));
+        noOfUnitsField.setText(fOps.getValue("$last.per", noOfUnitsField.getText()));
+        makingChargeField.setText(fOps.getValue("$last.making", ""));
+        discountField.setText(fOps.getValue("$last.discount", ""));
+        discountOnCombo3.setSelectedItem(fOps.getValue("$last.discounton", "Price"));
+        String weightUnit = fOps.getValue("$last.weightunit", "");
+        if(weightList.contains(weightUnit)) weightUnitCombo1.setSelectedItem(weightUnit);
+        String rateUnit = fOps.getValue("$last.rateunit", "");
+        if(weightList.contains(rateUnit))
+        {
+            weightUnitCombo2.setSelectedItem(rateUnit);
+            labelWeightUnit.setText(rateUnit.contains("(") && rateUnit.indexOf("(") < rateUnit.indexOf(")")
+                    ? rateUnit.substring(rateUnit.indexOf("(") + 1, rateUnit.indexOf(")")) : rateUnit);
+        }
+        calculateWeights();
+        calculateCost();
     }
 
     /**
@@ -121,7 +216,7 @@ public class IndianGold extends JFrame
      * @param source Represents the JComboBox to be parsed.
      * @return The milligram value of the selected unit.
      */
-    private double getWeightSelectionMgValue(JComboBox source)
+    private double getWeightSelectionMgValue(JComboBox<String> source)
     {
         String selection=(String)source.getSelectedItem();
         for(int i=0; i<weightList.size(); i++)
@@ -139,7 +234,7 @@ public class IndianGold extends JFrame
                 }
             }
         }
-        return new Double(0);
+        return 0;
     }
 	
     /**
@@ -213,13 +308,7 @@ public class IndianGold extends JFrame
 
         // GST
         double gst;
-        String allGst[] = fOps.getValue("$taxes", "Tax-1|0.0|Tax-2|0.0|Tax-3|0.0").split("\\|");
-        for(int i=0; i<allGst.length; i++)
-        {
-            if(allGst[i]==null && i%2 != 0) allGst[i] = "0.0";
-            if(i%2 != 0 && allGst[i].endsWith("%")) allGst[i] = allGst[i].substring(0, allGst[i].length()-1);
-        }
-        double gstPercent = Double.parseDouble(allGst[1]) + Double.parseDouble(allGst[3]) + Double.parseDouble(allGst[5]);
+        double gstPercent = TaxSettings.totalPercent(TaxSettings.parse(fOps.getValue("$taxes", TaxSettings.DEFAULT)));
         gst = (price + makingCharge - discount) * gstPercent/100;
         String gstStr = formatter.format(gst);
         String strGstPercent = formatter.format(gstPercent);
@@ -228,10 +317,10 @@ public class IndianGold extends JFrame
         double total = price + makingCharge - discount + gst;
         String totalStr = formatter.format(total);
 
-        if(new Double(pricePerMiligram * noOfMiligrams).equals(Double.NaN))
-            costArea.setText(getCostString());
+        if(Double.isNaN(pricePerMiligram * noOfMiligrams))
+            showCost();
         else
-            costArea.setText(getCostString(priceStr, makingChargeStr, discountStr, strGstPercent, gstStr, totalStr));
+            showCost(priceStr, makingChargeStr, discountStr, strGstPercent, gstStr, totalStr);
     }
 
     /**
@@ -268,19 +357,31 @@ public class IndianGold extends JFrame
         String unit=(String) weightUnitCombo2.getSelectedItem();
         if(unit.contains("(") && unit.contains(")") && unit.indexOf("(") < unit.indexOf(")"))
             labelWeightUnit.setText(unit.substring(unit.indexOf("(")+1, unit.indexOf(")")));
-        currency=Currency.getInstance(fOps.getValue("$currency", "USD"));
-        costArea.setText(getCostString());
+        currency=CurrencyCatalog.resolve(fOps.getValue("$currency", "USD"));
+        showCost();
         labelRate1.setText("Rate : "+currency.getSymbol());
         showRateBar(fOps.getValue("$ratebar", "1").equals("1"));
         showMainPane(fOps.getValue("$calculator", "0").equals("1"), false);
-        String taxes[] = fOps.getValue("$taxes", "Tax-1|0.0|Tax-2|0.0|Tax-3|0.0").split("\\|");
-        labelTax1.setText(taxes[0]);
-        numTax1Field.setText(taxes[1]);
-        labelTax2.setText(taxes[2]);
-        numTax2Field.setText(taxes[3]);
-        labelTax3.setText(taxes[4]);
-        numTax3Field.setText(taxes[5]);
+        java.util.List<TaxSettings.Tax> taxes = TaxSettings.parse(fOps.getValue("$taxes", TaxSettings.DEFAULT));
+        labelTax1.setText(taxes.get(0).name());
+        numTax1Field.setText(taxes.get(0).percent());
+        labelTax2.setText(taxes.get(1).name());
+        numTax2Field.setText(taxes.get(1).percent());
+        labelTax3.setText(taxes.get(2).name());
+        numTax3Field.setText(taxes.get(2).percent());
         cards.show(p32, "MAIN");
+    }
+
+    /**
+     * Internal method to collect the taxes shown in the price panel in the form saved as $taxes.
+     * @return The taxes as a $taxes value, with empty percentages saved as zero.
+     */
+    private String taxesFromPanel()
+    {
+        return TaxSettings.format(java.util.List.of(
+                new TaxSettings.Tax(labelTax1.getText(), numTax1Field.getText()),
+                new TaxSettings.Tax(labelTax2.getText(), numTax2Field.getText()),
+                new TaxSettings.Tax(labelTax3.getText(), numTax3Field.getText())));
     }
         
     public void showMainPane(boolean show, boolean invokedByRateBar)
@@ -298,14 +399,34 @@ public class IndianGold extends JFrame
         int jj=rect.y+rect.height;
         mainPane.setVisible(show);
         ratePane.setBorder(fOps.getValue("$calculator", "1").equals("1")?BorderFactory.createEtchedBorder():BorderFactory.createRaisedBevelBorder());
-        pack();
+        repack();
         if(show) setTitle(NAME_STRING_FULL);
         else setTitle(NAME_STRING_SHORT);
         if(invokedByRateBar)
         {
+            // keep the bottom-right corner where it was, but never move the window off the screen
             rect=getBounds();
-            setLocation(ii-rect.width,jj-rect.height);
+            Rectangle screen = getGraphicsConfiguration().getBounds();
+            Insets insets = Toolkit.getDefaultToolkit().getScreenInsets(getGraphicsConfiguration());
+            int x = Math.max(screen.x + insets.left, ii - rect.width);
+            int y = Math.max(screen.y + insets.top, jj - rect.height);
+            setLocation(x, y);
         }
+    }
+
+    /**
+     * Fits the window to its contents. The window is not resizable, so Java gives the window manager its size as
+     * both minimum and maximum, but pack() alone does not update those limits: after switching between the full
+     * window and the rate bar alone, the window manager squeezed the window back to the old size when it was
+     * restored from minimized, or kept an empty area. Allowing resizing for the moment of the pack sends the new
+     * limits.
+     */
+    void repack()
+    {
+        boolean fixed = !isResizable();
+        if(fixed) setResizable(true);
+        pack();
+        if(fixed) setResizable(false);
     }
     
     public void showRateBar(boolean show)
@@ -315,11 +436,9 @@ public class IndianGold extends JFrame
             shAdapter=new ShowHideAdapter(); // clickcondition settings also may have changed
             ratePane.addMouseListener(shAdapter);
             ratePane.setVisible(true);
-            ratePane.updateMetalUnitLabels();
-            ratePane.updateMetalRates(Double.valueOf(fOps.getValue("$convfactor", "1D"))); // this will also save the above value since it saves metal rates.
+            ratePane.rebuild();
             ratePane.setBorder(fOps.getValue("$calculator", "1").equals("1")?BorderFactory.createEtchedBorder():BorderFactory.createRaisedBevelBorder());
-            ratePane.updateToolTips();
-            pack(); // this and above code is here as without the ratebar showing, updateMetalRates method is of no use
+            repack();
             if(fOps.getValue("$clickcondition", "1").equals("1"))
             {
                 p12.setToolTipText("Click on a rate on the rate list to update here");
@@ -338,7 +457,7 @@ public class IndianGold extends JFrame
             ratePane.removeMouseListener(shAdapter); // removed because it will be re-created if ratebar is already present
             shAdapter=null;                          // and clickcondition settings also may have changed
             ratePane.setVisible(false);
-            pack();
+            repack();
             p12.setToolTipText(null);
             for(Component cmp : p12.getComponents())
                 if(cmp instanceof JComponent) ((JComponent)cmp).setToolTipText(null);
@@ -348,30 +467,63 @@ public class IndianGold extends JFrame
     }
     
     void settingsProc() {
-        box = new AddRemoveBox(this, fOps);
+        box = new AddRemoveBox(this, fOps, marketSettings, rateService);
         box.setVisible(true);
         resetUIData();
-        ratePane.setSchedule(Integer.valueOf(fOps.getValue("$rateauto", "2")));
+        ratePane.rebuild();
+        if(box.manualPricesChanged()) rateService.refresh(com.sounaks.indiangold.rates.ManualProvider.ID);
+        rateService.refreshNow(false); // sources may have been switched on; each source's minimum interval still applies
     }
 
+    /**
+     * Copies a rate from the rate bar into the calculator, with the quantity and unit it is for.
+     * @param label The clicked row; the header row and rows without a price are ignored.
+     */
     void updateRate(RateLabel label) {
-        if(!ratePane.fetchRatesInProgress) {
-            if(RateBar.PRECIOUS_METALS_STRING.contains(label.getName()) || RateBar.BASE_METALS_STRING.contains(label.getName()))
-                rateField.setText(label.getRate());
-            if(RateBar.PRECIOUS_METALS_STRING.contains(label.getName().toLowerCase()))
-            {
-                noOfUnitsField.setText(fOps.getValue("$punitspercurrency", "1"));
-                weightUnitCombo2.setSelectedItem(fOps.getValue("$punit", weightList.elementAt(1)));
-            }
-            else if(RateBar.BASE_METALS_STRING.contains(label.getName().toLowerCase()))
-            {
-                noOfUnitsField.setText(fOps.getValue("$bunitspercurrency", "1"));
-                weightUnitCombo2.setSelectedItem(fOps.getValue("$bunit", weightList.elementAt(1)));
-            }
-            String unit=(String) weightUnitCombo2.getSelectedItem();
-            if(unit.contains("(") && unit.contains(")") && unit.indexOf("(") < unit.indexOf(")"))
-                labelWeightUnit.setText(unit.substring(unit.indexOf("(")+1, unit.indexOf(")")));
+        if(label.metal() == null || label.getRate() == null) return;
+        rateField.setText(label.getRate());
+        MarketSettings.DisplayUnit unit = label.unit();
+        double qty = unit.quantity();
+        noOfUnitsField.setText(qty == Math.rint(qty) ? String.valueOf((long)qty) : String.valueOf(qty));
+        if(weightList.contains(unit.name()))
+        {
+            weightUnitCombo2.setSelectedItem(unit.name());
+            weightUnitCombo1.setSelectedItem(unit.name()); // the weight is entered in the same unit as the rate
         }
+        String selected = (String) weightUnitCombo2.getSelectedItem();
+        if(selected != null && selected.contains("(") && selected.contains(")") && selected.indexOf("(") < selected.indexOf(")"))
+            labelWeightUnit.setText(selected.substring(selected.indexOf("(")+1, selected.indexOf(")")));
+    }
+
+    /**
+     * Shows the About dialog over the main window, with a clickable e-mail link.
+     */
+    private void showAbout()
+    {
+        JEditorPane text = new JEditorPane("text/html", "<html>" + NAME_STRING_FULL + "<p>Created and developed by Sounak Choudhury<p>"
+                + "E-mail: <a href='mailto:contact@sounaks.com'>contact@sounaks.com</a><p><p>"
+                + "This software is provided \"AS IS\", without warranty of any kind,<br>"
+                + "under the GNU General Public License version 3 (see LICENSE.txt).<p>"
+                + "Suggestions and credits are welcome.</html>");
+        text.setEditable(false);
+        text.setOpaque(false);
+        text.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, Boolean.TRUE);
+        text.setFont(UIManager.getFont("Label.font"));
+        text.addHyperlinkListener(he -> {
+            if(he.getEventType() == javax.swing.event.HyperlinkEvent.EventType.ACTIVATED)
+            {
+                try
+                {
+                    Links.open(text, he.getURL().toURI());
+                }
+                catch(java.net.URISyntaxException e)
+                {
+                    System.out.println("Cannot open " + he.getURL() + ": " + e);
+                }
+            }
+        });
+        ImageIcon imageicon = new ImageIcon(IndianGold.class.getResource("/duke.gif"));
+        JOptionPane.showMessageDialog(this, text, "About IndianGold", JOptionPane.INFORMATION_MESSAGE, imageicon);
     }
 
     private class PrivateActionAdapter implements ActionListener
@@ -382,9 +534,7 @@ public class IndianGold extends JFrame
             Object src = ae.getSource();
             if(src.equals(abtButton))
             {
-                String s1 = "<html>Created and Developed by : Sounak Choudhury<p>E-mail Address : <a href='mailto:contact@sounaks.com'>contact@sounaks.com</a><p>The software, information and documentation<p>is provided \"AS IS\" without warranty of any<p>kind, either expressed or implied. The Readme.txt<p>file containing EULA must be read before use.<p>Suggestions and credits are Welcomed.</html>";
-                ImageIcon imageicon = new ImageIcon(Thread.currentThread().getContextClassLoader().getResource("duke.gif"));
-                JOptionPane.showMessageDialog(new Frame(), s1, "About IndianGold...", 1, imageicon);
+                showAbout();
             }
             else if(src.equals(setButton))
             {
@@ -429,10 +579,7 @@ public class IndianGold extends JFrame
             if(!(fe.getOppositeComponent() instanceof NumberField) && nowcard && taxBoxActivated)
             {
 //                System.out.println("Save triggered from focus lost!");
-                String taxes = labelTax1.getText() + "|" + numTax1Field.getText() + "|"
-                               + labelTax2.getText() + "|" + numTax2Field.getText() + "|"
-                               + labelTax3.getText() + "|" + numTax3Field.getText();
-                fOps.setValue("$taxes", taxes);
+                fOps.setValue("$taxes", taxesFromPanel());
                 fOps.saveToFile();
                 taxBoxActivated = false;
                 cards.show(p32, "MAIN");
@@ -452,10 +599,7 @@ public class IndianGold extends JFrame
                 if(nowcard && taxBoxActivated)
                 {
 //                    System.out.println("Save triggered from focus gained!");
-                    String taxes = labelTax1.getText() + "|" + numTax1Field.getText() + "|"
-                                   + labelTax2.getText() + "|" + numTax2Field.getText() + "|"
-                                   + labelTax3.getText() + "|" + numTax3Field.getText();
-                    fOps.setValue("$taxes", taxes);
+                    fOps.setValue("$taxes", taxesFromPanel());
                     fOps.saveToFile();
                     taxBoxActivated = false;
                     cards.show(p32, "MAIN");
@@ -480,18 +624,22 @@ public class IndianGold extends JFrame
     {
         super(NAME_STRING_FULL);
         fOps=new FileOperations(new File("units.dat"),NAME_STRING_MEDIUM);
+        // Settings of an earlier version: the user's own file, or a units.dat saved next to the jar.
+        existingUser = fOps.loadedFrom() != FileOperations.Source.BUNDLED && fOps.loadedFrom() != FileOperations.Source.BUILT_IN_DEFAULTS;
+        marketSettings = new MarketSettings(fOps);
+        rateService = createRateService();
         weightList=new Vector<String>(); //fOps.getCheckedUnitNames();
         mgValue=new Vector<String>(); //fOps.getCheckedUnitValues();
         shAdapter=new ShowHideAdapter();
         fAdapter = new NumberFieldFocusAdapter();
         aAdapter = new PrivateActionAdapter();
-        currency = Currency.getInstance(fOps.getValue("$currency", "USD"));
+        currency = CurrencyCatalog.resolve(fOps.getValue("$currency", "USD"));
         JTextField[] fields = new JTextField[11];
         labelWt = new JLabel("Wt.");
         weightField=new NumberField(13, false);
         weightField.addActionListener(aAdapter);
         weightField.addFocusListener(fAdapter);
-        weightUnitCombo1=new JComboBox(weightList);
+        weightUnitCombo1=new JComboBox<String>(weightList);
         weightUnitCombo1.addActionListener(aAdapter);
         int requiredTFheight = weightUnitCombo1.getPreferredSize().height;
         fields[0]=weightField;
@@ -538,7 +686,7 @@ public class IndianGold extends JFrame
 //                labelWeightUnit.setVisible(false);
         noOfUnitsField.addActionListener(aAdapter);
         noOfUnitsField.addFocusListener(fAdapter);
-        weightUnitCombo2=new JComboBox(weightList);
+        weightUnitCombo2=new JComboBox<String>(weightList);
 //        weightUnitCombo2.setPreferredSize(goodDimension);
         weightUnitCombo2.addActionListener(aAdapter);
         weightUnitCombo2.setVisible(false);
@@ -555,7 +703,7 @@ public class IndianGold extends JFrame
         labelDiscount1=new JLabel("Discount");
         labelDiscount2=new JLabel("on");
         String discOn[] = {"Price", "Making", "Total"};
-        discountOnCombo3=new JComboBox(discOn);
+        discountOnCombo3=new JComboBox<String>(discOn);
         discountOnCombo3.addActionListener(aAdapter);
         makingChargeField=new NumberField(4, true);
         fields[3]=makingChargeField;
@@ -581,7 +729,7 @@ public class IndianGold extends JFrame
         StyleConstants.setBold(attribs , true);
         StyleConstants.setForeground(attribs , Color.red);
         costArea.setParagraphAttributes(attribs,true);  
-        costArea.setText(getCostString());
+        showCost();
         costArea.setEditable(false);
         costArea.setFocusable(false);
         costArea.setBorder(BorderFactory.createEtchedBorder());
@@ -601,9 +749,32 @@ public class IndianGold extends JFrame
         table1=new JTable(model);
         table1.getColumnModel().getColumn(0).setPreferredWidth(150);
         table1.getColumnModel().getColumn(1).setPreferredWidth(190);
-        DefaultTableCellRenderer rightRenderer = new DefaultTableCellRenderer();
-        rightRenderer.setHorizontalAlignment(JLabel.RIGHT );
+        DefaultTableCellRenderer rightRenderer = new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(
+            JTable table, Object value, boolean isSelected, 
+            boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(
+                table, value, isSelected, hasFocus, row, column);
+                c.setFont(new Font("Monospaced", Font.PLAIN, 11));
+                setBorder(BorderFactory.createCompoundBorder(getBorder(), padding));
+                setHorizontalAlignment(JLabel.RIGHT);
+                return c;
+            }
+        };
+        DefaultTableCellRenderer gapRenderer = new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(
+            JTable table, Object value, boolean isSelected, 
+            boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(
+                table, value, isSelected, hasFocus, row, column);
+                setBorder(BorderFactory.createCompoundBorder(getBorder(), padding));
+                return c;
+            }
+        };
         table1.getColumnModel().getColumn(0).setCellRenderer( rightRenderer );
+        table1.getColumnModel().getColumn(1).setCellRenderer( gapRenderer );
         table1.setFocusable(false);
         spane =new JScrollPane(table1);
         displayNumRows(Integer.valueOf(fOps.getValue("$numrows", "10")));
@@ -703,10 +874,20 @@ public class IndianGold extends JFrame
         for(JTextField component : fields) { // Apply standard height on all textfields
             component.setPreferredSize(new Dimension(component.getPreferredSize().width, requiredTFheight));
         }
-        ratePane = new RateBar(fOps, (fOps.getValue("$calculator", "1").equals("1")?BorderFactory.createEtchedBorder():BorderFactory.createRaisedBevelBorder()));
+        ratePane = new RateBar(rateService, marketSettings, fOps, (fOps.getValue("$calculator", "1").equals("1")?BorderFactory.createEtchedBorder():BorderFactory.createRaisedBevelBorder()));
+        ratePane.setSizeChangedListener(() -> { if(isDisplayable()) repack(); }); // new prices can change the bar's size
 
         init();
         resetUIData();
+        restoreCalculator();
+        addWindowListener(new WindowAdapter()
+        {
+            @Override
+            public void windowClosing(WindowEvent e)
+            {
+                saveCalculator();
+            }
+        });
     }
     
     /**
@@ -718,16 +899,7 @@ public class IndianGold extends JFrame
         add(mainPane, BorderLayout.CENTER);
         add(ratePane, BorderLayout.EAST);
 
-        try
-        {
-            java.net.URL url1 = Thread.currentThread().getContextClassLoader().getResource("igcircle.gif");
-            Image icon = ImageIO.read(url1);
-            setIconImage(icon);
-        }
-        catch(IOException e)
-        {
-            System.out.println("Icon not found.");
-        }
+        DesktopIntegration.applyIcons(this);
     }
     
     /**
@@ -797,18 +969,93 @@ public class IndianGold extends JFrame
         }
     }
     
+    /**
+     * Sets up the market rate sources. Prices that versions before 5.0 kept in units.dat move to rates.properties.
+     * @return The rate service; it starts fetching when {@link #startRates()} is called.
+     */
+    private RateService createRateService()
+    {
+        java.nio.file.Path dataDir = FileOperations.getDataDir().toPath();
+        ProviderRegistry registry = ProviderRegistry.load(dataDir);
+        registry.problems().forEach(problem -> System.out.println("Rate source not loaded: " + problem));
+        RateStore store = RateStore.open(dataDir);
+        if(store.isEmpty() && existingUser && !fOps.getAllMetalNames().isEmpty())
+        {
+            store.importLegacy(fOps.getAllProperties());
+            try
+            {
+                store.save();
+                for(String key : new java.util.ArrayList<>(fOps.getAllMetalNames())) fOps.removeValue(key);
+                fOps.removeValue("$ratetime");
+                fOps.removeValue("$convfactor");
+                fOps.saveToFile();
+            }
+            catch(IOException e)
+            {
+                System.out.println("Cannot save the market rates: " + e);
+            }
+        }
+        java.time.Clock clock = java.time.Clock.systemDefaultZone();
+        HttpFetcher http = new HttpFetcher("IndianGold/" + VERSION + " (+https://github.com/sounak3/indiangold)", java.time.Duration.ofSeconds(15), clock);
+        return new RateService(registry, store, marketSettings, http, clock);
+    }
+
+    /**
+     * Asks for the country at first start (and once after updating from an older version), then starts fetching rates.
+     */
+    void startRates()
+    {
+        if(marketSettings.country().isEmpty())
+        {
+            CountryDefaults countries = CountryDefaults.load();
+            CountryDialog.ask(this, countries, CountryDefaults.systemCountry(), existingUser).ifPresent(choice -> {
+                if(choice.applyDefaults()) marketSettings.applyCountry(countries.forCountry(choice.country()));
+                else fOps.setValue("$country", choice.country());
+                boolean useCountryUnits = choice.applyDefaults();
+                if(choice.webSources()) marketSettings.acceptWebDisclaimer();
+                else
+                {
+                    java.util.List<RateService.SourceChoice> sources = new java.util.ArrayList<>();
+                    for(RateService.SourceChoice source : marketSettings.sources())
+                    {
+                        boolean web = rateService.registry().find(source.id()).map(e -> e.provider().isWebPage()).orElse(false);
+                        sources.add(web ? new RateService.SourceChoice(source.id(), false) : source);
+                    }
+                    marketSettings.setSources(sources);
+                }
+                fOps.saveToFile();
+                resetUIData();
+                if(useCountryUnits) useGoldUnitInCalculator();
+                repack();
+            });
+        }
+        rateService.start();
+    }
+
+    /**
+     * Starts the calculator in the country's gold unit, e.g. weight in grams and the rate per 10 g in India.
+     */
+    private void useGoldUnitInCalculator()
+    {
+        MarketSettings.DisplayUnit gold = marketSettings.unit(com.sounaks.indiangold.rates.Metal.Group.GOLD);
+        if(!weightList.contains(gold.name())) return;
+        weightUnitCombo1.setSelectedItem(gold.name());
+        weightUnitCombo2.setSelectedItem(gold.name());
+        double qty = gold.quantity();
+        noOfUnitsField.setText(qty == Math.rint(qty) ? String.valueOf((long)qty) : String.valueOf(qty));
+        labelWeightUnit.setText(gold.shortName());
+    }
+
     private class ShowHideAdapter extends ClickCountAdapter
     {
-        boolean doubleClickForShowHide, manualRefreshRates;
+        boolean doubleClickForShowHide;
 
         public ShowHideAdapter() 
         {
             doubleClickForShowHide=fOps.getValue("$clickcondition", "1").equals("1");
             // true = Single click to fill the rate. Double click for show/hide calculator.
             // false = Double click to fill the rate. Right click for show/hide calculator.
-            
-            manualRefreshRates=fOps.getValue("$rateauto", "0").equals("0");
-            // true = Manual refresh enabled.
+
         }
 
         @Override
@@ -818,7 +1065,7 @@ public class IndianGold extends JFrame
             {
                 if(doubleClickForShowHide) // right single click for clickCondition=1, refresh the rate
                 {
-                    if(manualRefreshRates) ratePane.fetchRates();
+                    ratePane.refreshNow(IndianGold.this);
                 }
                 else // right single click for clickCondition=2, show/hide calculator
                 {
@@ -835,7 +1082,7 @@ public class IndianGold extends JFrame
                 }
                 else // left single click for clickCondition=2, refresh the rate
                 {
-                    if(manualRefreshRates) ratePane.fetchRates();
+                    ratePane.refreshNow(IndianGold.this);
                 }
             }
         }
@@ -883,12 +1130,19 @@ public class IndianGold extends JFrame
      */
     public static void main(String args[])
     {
-        IndianGold mm=new IndianGold();
-        mm.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        mm.pack();
-        Dimension loc=getScreenCenterLocation(mm);
-        mm.setLocation(loc.width,loc.height);
-        mm.setResizable(false);
-        mm.setVisible(true);
+        DesktopIntegration.setWindowClass(); // before the first window, so docks can match it to IndianGold
+        SwingUtilities.invokeLater(() -> {
+            IndianGold mm=new IndianGold();
+            mm.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            mm.pack();
+            Dimension loc=getScreenCenterLocation(mm);
+            mm.setLocation(loc.width,loc.height);
+            mm.setResizable(false);
+            mm.setVisible(true);
+            Thread launcher = new Thread(DesktopIntegration::registerJarLauncher, "desktop-entry");
+            launcher.setDaemon(true);
+            launcher.start();
+            mm.startRates();
+        });
     }
 }

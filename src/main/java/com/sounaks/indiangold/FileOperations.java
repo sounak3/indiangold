@@ -18,20 +18,28 @@ package com.sounaks.indiangold;
 
 import java.util.*;
 import java.io.*;
-import java.net.MalformedURLException;
 import java.net.URISyntaxException;
-import java.net.URLDecoder;
 
 /**
- *
+ * Loads and saves the software properties file. The user's copy lives in ~/.indiangold, so saving works
+ * wherever the jar is installed; a copy next to the jar or the one bundled in it only seeds the first start.
  * @author Sounak Choudhury
  */
 class FileOperations
 {
+	static final String DATA_DIR_NAME = ".indiangold";
+	static File jarDir; // Folder of the running jar; tests point it at a temp folder.
+
+	/** Where the settings were loaded from at start. */
+	enum Source
+	{
+		USER_FILE, BACKUP, NEXT_TO_JAR, BUNDLED, BUILT_IN_DEFAULTS
+	}
+
 	private Properties props, tmpProps;
-	private FileOutputStream fout = null;
-	private InputStream fin = null;
-	private File propFile;
+	private Source loadedFrom = Source.BUILT_IN_DEFAULTS;
+	private final String fileName;
+	private final File userFile;
 	private final String header;
 	private Vector <String>allUnitNames;
 	private Vector <String>allUnitValues;
@@ -40,43 +48,107 @@ class FileOperations
 	boolean modify;
 	
         /**
-         * This internal method is the one actually responsible to load the system properties file from the file system. This is called from the constructor.
+         * Gets the per-user folder holding the properties file and its backup.
+         * @return The folder ~/.indiangold, which may not exist yet.
+         */
+	static File getDataDir()
+	{
+		return new File(System.getProperty("user.home"), DATA_DIR_NAME);
+	}
+
+        /**
+         * Gets the folder containing the running jar, or the classes folder when run from an IDE.
+         * @return The folder, or null if it cannot be found.
+         */
+	static File getJarDir()
+	{
+		if(jarDir == null)
+		{
+			try
+			{
+				File location = new File(FileOperations.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+				jarDir = location.isDirectory() ? location : location.getParentFile();
+			}
+			catch(URISyntaxException | RuntimeException e)
+			{
+				System.out.println("Cannot find the folder of this jar file: " + e);
+			}
+		}
+		return jarDir;
+	}
+
+	private static File backupOf(File file)
+	{
+		return new File(file.getParentFile(), file.getName() + ".bak");
+	}
+
+        /**
+         * Reads a properties file, rejecting one that is malformed or has no units, as left behind by an interrupted save.
+         * @return The properties, or null if the content is not usable.
+         */
+	private static Properties readUsable(InputStream in, String source) throws IOException
+	{
+		Properties loaded = new Properties();
+		try
+		{
+			loaded.load(in);
+		}
+		catch(IllegalArgumentException e)
+		{
+			System.out.println("Cannot read " + source + ": " + e.getMessage());
+			return null;
+		}
+		for(String key : loaded.stringPropertyNames())
+		{
+			if(key.startsWith("*") || key.startsWith("_")) return loaded;
+		}
+		System.out.println("Ignoring " + source + ": it has no units.");
+		return null;
+	}
+
+        /**
+         * Loads the first usable copy of the properties file: the user's file in ~/.indiangold, its .bak, a copy next to
+         * the jar (older versions saved there), then the copy bundled in the jar. Loading never writes any file.
          */
 	private void loadData()
 	{
-		/*fout=null;
-		fin=null;
-		props=null;
-		Runtime rtime=Runtime.getRuntime();
-		rtime.runFinalization();
-		rtime.gc();*/
-		
 		props = new Properties();
 		tmpProps = new Properties();
-		try
+		Properties loaded = null;
+		File jarFolder = getJarDir();
+		File[] candidates = { userFile, backupOf(userFile), jarFolder == null ? null : new File(jarFolder, fileName) };
+		Source[] sources = { Source.USER_FILE, Source.BACKUP, Source.NEXT_TO_JAR };
+		for(int i = 0; i < candidates.length; i++)
 		{
-                    if(propFile.getPath().contains(".jar!"))
-                        fin = getClass().getResourceAsStream("/"+propFile.getName());
-                    else
-			fin = new FileInputStream(propFile);
-		}
-		catch(FileNotFoundException fe)
-		{
-                    System.out.println("Missing: "+propFile.getPath());
-		}
-		//load data1.
-		try
-		{
-			if(fin != null)
+			File candidate = candidates[i];
+			if(candidate == null || !candidate.isFile()) continue;
+			try(InputStream in = new BufferedInputStream(new FileInputStream(candidate)))
 			{
-				props.load(fin);
-				fin.close();
+				loaded = readUsable(in, candidate.getPath());
+			}
+			catch(IOException e)
+			{
+				System.out.println("Cannot read " + candidate + ": " + e);
+			}
+			if(loaded != null)
+			{
+				loadedFrom = sources[i];
+				break;
 			}
 		}
-		catch(IOException ie)
+		if(loaded == null)
 		{
-			System.out.println("Error reading file.");
+			try(InputStream in = FileOperations.class.getResourceAsStream("/" + fileName))
+			{
+				if(in != null) loaded = readUsable(in, "bundled " + fileName);
+				if(loaded != null) loadedFrom = Source.BUNDLED;
+			}
+			catch(IOException e)
+			{
+				System.out.println("Cannot read bundled " + fileName + ": " + e);
+			}
 		}
+		if(loaded != null) props.putAll(loaded);
 		loadUnitVectors();
                 loadMetalAndRateVectors();
 	}
@@ -99,12 +171,10 @@ class FileOperations
 			allUnitValues.addElement(tmp1);
                     }
 		}
-                if(allUnitNames.isEmpty())
+                if(allUnitNames.isEmpty()) // Built-in defaults; they reach the disk with the next save.
                 {
                     setValue("*troy ounce (oz t)", "3.215074656862798E-5");
                     setValue("*pound (lb)", "2.204619999998249E-6");
-                    saveToFile();
-                    loadUnitVectors();
                 }
 	}
 	
@@ -115,97 +185,58 @@ class FileOperations
          */
 	FileOperations(File file, String hdr)
 	{
-		// Getting general path for this jar file...
-		String path="", createdPath="";
-		try
-		{
-                    path = URLDecoder.decode(Thread.currentThread().getContextClassLoader().getResource(file.getName()).getPath(), "UTF-8");
-                    if(path.contains(".jar!"))
-                    {
-                        String path1 = path.split(".jar!")[0].replace('\\', '/');
-                        createdPath = path1.substring(0, path1.lastIndexOf('/'))+ "/" + file.getName();
-		}
-                    try
-                    {
-                        File test = new File((new java.net.URL(createdPath)).toURI());
-                        if(test.exists())
-                        {
-                            path = test.getPath();
-//                            System.out.println("Exists: "+path);
-                        }
-//                        else
-//                            System.out.println("Jar only: "+path);
-                    }
-                    catch(MalformedURLException | URISyntaxException me)
-                    {
-//                        System.out.println("Jar only: "+path);
-                    }
-		}
-		catch(UnsupportedEncodingException uee)
-		{
-			System.out.println("Unsupported encoding: UTF-8");
-		}
-		catch(NullPointerException ne)
-		{
-			System.out.println("Class loader or resource path not found for this jar file.");
-			path = "";
-		}
-
-		if(path.equals(""))
-		{
-			try
-			{
-				path = URLDecoder.decode(FileOperations.class.getProtectionDomain().getCodeSource().getLocation().getPath(), "UTF-8");
-				if(path.toLowerCase().endsWith(".jar"))
-				{
-					File tryfile = new File(path);
-					path = URLDecoder.decode(tryfile.getParentFile().getPath(), "UTF-8");
-				}
-			}
-			catch(UnsupportedEncodingException uee)
-			{
-				System.out.println("Unsupported encoding: UTF-8");
-			}
-			catch(NullPointerException ne)
-			{
-				System.out.println("Protection domain or code source for this jar file not found.");
-			}
-		}
-//		System.out.println(path);
-
-		propFile=new File(path.endsWith(file.getName())?path.replaceAll(file.getName(), ""):path, file.getName());
+		fileName=file.getName();
+		userFile=new File(getDataDir(), fileName);
 		header=hdr;
 		allUnitNames=new Vector<String>();
 		allUnitValues=new Vector<String>();
                 allMetalNames=new Vector<String>();
                 allMetalRates=new Vector<String>();
 		loadData();
+		tmpProps.clear();
 		modify = false;
 	}
-	
+
         /**
-         * This method saves the properties file of this software in the file system.
+         * Tells where the settings came from, e.g. to recognize a user of an earlier version.
+         * @return The source the settings were loaded from at start.
          */
-	public void saveToFile()
+	Source loadedFrom()
+	{
+		return loadedFrom;
+	}
+
+        /**
+         * Gets the file the properties are saved to.
+         * @return The properties file in ~/.indiangold.
+         */
+	File getUserFile()
+	{
+		return userFile;
+	}
+
+        /**
+         * Writes the properties to a temp file and swaps it in, so a crash mid-save never leaves a truncated file.
+         * The previous version is kept as file.bak.
+         */
+	static void writeProperties(File file, Properties content, String header) throws IOException
+	{
+		com.sounaks.indiangold.rates.SafeFiles.writeProperties(file.toPath(), content, header);
+	}
+
+        /**
+         * This method saves the properties file of this software in ~/.indiangold.
+         * It is synchronized because the rate bar also saves from its timer thread.
+         */
+	public synchronized void saveToFile()
 	{
 		try
 		{
-                    if(propFile.getPath().contains(".jar!"))
-                    {
-                        String path0 = propFile.getPath().split(".jar!")[0].replace('\\', '/');
-//                        System.out.println(path1);
-                        propFile = new File(path0.substring(5, path0.lastIndexOf('/')), propFile.getName());
-//                        System.out.println(propFile.getPath());
-                        if(!propFile.exists()) propFile.createNewFile();
-                    }
-//                    System.out.println("Saving to: "+propFile.getPath());
-			fout = new FileOutputStream(propFile);
-			props.store(fout, header);
-			fout.close();
+			writeProperties(userFile, props, header);
 		}
 		catch(IOException e)
 		{
-                    System.out.println(e.getMessage());
+                    System.out.println("Cannot save " + userFile + ": " + e);
                 }
 		tmpProps.clear();
 		loadUnitVectors();
@@ -296,6 +327,17 @@ class FileOperations
 	public String getValue(String pName,String pValue)
 	{
 		return props.getProperty(pName, pValue);
+	}
+
+        /**
+         * Checks whether a unit exists in the unit list, checked or not.
+         * @param name The unit name without the * or _ prefix; case does not matter.
+         * @return True if the unit is in the list.
+         */
+	boolean hasUnit(String name)
+	{
+		String key = name.toLowerCase();
+		return props.containsKey("*" + key) || props.containsKey("_" + key);
 	}
         
 	/**

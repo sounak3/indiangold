@@ -1,0 +1,81 @@
+// Fallback for a job's first run, before Jenkins has registered the parameters below.
+def defaultJarPath = '/home/sounak/Documents/NetBeansProjects/IndianGold/target/indiangold.jar'
+
+pipeline {
+    agent none
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '30'))
+        disableConcurrentBuilds()
+        quietPeriod(15)
+        skipDefaultCheckout()
+    }
+    parameters {
+        string(name: 'JAR_PATH', defaultValue: defaultJarPath, description: 'IDE-built jar on the lin host (dell5558)')
+    }
+    environment {
+        JAR = "${params.JAR_PATH ?: defaultJarPath}"
+    }
+    stages {
+        stage('Collect jar') {
+            agent { label 'lin' }
+            steps {
+                cleanWs()
+                sh '''
+                    test -s "$JAR" || { echo "Jar not found: $JAR"; exit 1; }
+                    unzip -tq "$JAR"
+                    cp "$JAR" indiangold_latest.jar
+                    sha256sum indiangold_latest.jar
+                '''
+                script {
+                    def commit = sh(returnStdout: true, script: 'git -C "$(dirname "$(dirname "$JAR")")" rev-parse --short HEAD').trim()
+                    def changes = sh(returnStdout: true, script: 'git -C "$(dirname "$(dirname "$JAR")")" status --porcelain').trim()
+                    currentBuild.description = changes ? "${commit} + uncommitted changes" : commit
+                }
+                archiveArtifacts artifacts: 'indiangold_latest.jar', fingerprint: true
+                stash name: 'jar', includes: 'indiangold_latest.jar'
+            }
+        }
+        stage('Deploy to test machines') {
+            parallel {
+                stage('lin') {
+                    agent { label 'lin' }
+                    options { timeout(time: 5, unit: 'MINUTES') }
+                    steps {
+                        cleanWs()
+                        unstash 'jar'
+                        sh 'java -version; cp indiangold_latest.jar "$HOME/Desktop/indiangold_latest.jar"; sha256sum "$HOME/Desktop/indiangold_latest.jar"'
+                    }
+                }
+                stage('mac') {
+                    agent { label 'mac' }
+                    options { timeout(time: 5, unit: 'MINUTES') }
+                    steps {
+                        cleanWs()
+                        unstash 'jar'
+                        sh 'java -version; cp indiangold_latest.jar "$HOME/Desktop/indiangold_latest.jar"; shasum -a 256 "$HOME/Desktop/indiangold_latest.jar"'
+                    }
+                }
+                stage('win') {
+                    agent { label 'win' }
+                    options { timeout(time: 5, unit: 'MINUTES') }
+                    steps {
+                        cleanWs()
+                        unstash 'jar'
+                        bat 'java -version && copy /Y indiangold_latest.jar "%USERPROFILE%\\Desktop\\indiangold_latest.jar" && certutil -hashfile "%USERPROFILE%\\Desktop\\indiangold_latest.jar" SHA256'
+                    }
+                }
+            }
+        }
+        stage('Unit tests') {
+            agent { label 'lin' }
+            steps {
+                sh '''
+                    REPO="$(dirname "$(dirname "$JAR")")"
+                    rsync -a --delete --exclude /target --exclude /.git --exclude /bin --exclude '/*.jar' "$REPO/" src/
+                    cd src && mvn -B -ntp -Dmaven.test.failure.ignore=true test
+                '''
+                junit allowEmptyResults: true, testResults: 'src/target/surefire-reports/*.xml'
+            }
+        }
+    }
+}

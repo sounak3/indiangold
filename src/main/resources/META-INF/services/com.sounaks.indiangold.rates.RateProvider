@@ -1,0 +1,2 @@
+# Java rate providers built into IndianGold. Plug-in jars list theirs in the same kind of file.
+com.sounaks.indiangold.rates.ManualProvider
