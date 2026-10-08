@@ -756,7 +756,7 @@ public class IndianGold extends JFrame
             boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(
                 table, value, isSelected, hasFocus, row, column);
-                c.setFont(new Font("Courier", Font.PLAIN, 11));
+                c.setFont(new Font("Monospaced", Font.PLAIN, 11));
                 setBorder(BorderFactory.createCompoundBorder(getBorder(), padding));
                 setHorizontalAlignment(JLabel.RIGHT);
                 return c;
