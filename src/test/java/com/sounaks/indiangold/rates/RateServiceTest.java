@@ -75,6 +75,7 @@ class RateServiceTest
 		Instant asOf;
 		RuntimeException crash;
 		RateException failure;
+		RateProvider.Usage reportedUsage; // set to make asking for the usage free and answer with this
 
 		FakeProvider(String id, int quota, Duration minInterval)
 		{
@@ -90,6 +91,8 @@ class RateServiceTest
 		@Override public int monthlyQuota() { return quota; }
 		@Override public Duration minInterval() { return minInterval; }
 		@Override public List<LocalTime> defaultSchedule() { return List.of(LocalTime.of(10, 30), LocalTime.of(16, 30)); }
+		@Override public boolean usageIsFree() { return reportedUsage != null; }
+		@Override public Optional<RateProvider.Usage> usage(FetchContext context) { return Optional.ofNullable(reportedUsage); }
 
 		@Override
 		public RateSnapshot fetch(FetchContext context) throws RateException
@@ -226,6 +229,51 @@ class RateServiceTest
 
 		assertEquals(40, budget.usedThisMonth());
 		assertEquals(60, budget.remainingThisMonth());
+	}
+
+	@Test
+	void theProvidersLowerCountWinsAndFreesTodaysShare()
+	{
+		TestClock clock = new TestClock("2026-10-08T23:00:00");
+		RateStore.QuotaBudget budget = RateStore.inMemory().budget("p", 25, clock);
+		budget.record(5); // what the app sent today
+
+		budget.syncWith(new RateProvider.Usage("Free", 25, 3)); // what Metals.Dev counted
+
+		assertEquals(3, budget.usedThisMonth());
+		assertEquals(3, budget.usedToday(), "the 2 requests it did not count come off today's count too");
+	}
+
+	@Test
+	void afterEachRequestTheSourcesOwnCountIsTakenWhenAskingIsFree()
+	{
+		TestClock clock = new TestClock("2026-10-08T11:00:00");
+		FakeProvider limited = new FakeProvider("limited", 25, Duration.ofMinutes(1));
+		limited.reportedUsage = new RateProvider.Usage("Free", 25, 7);
+		RateService service = service(clock, new TestSettings(), RateStore.inMemory(), limited);
+
+		service.fetchDue();
+
+		assertEquals(1, limited.fetches.get());
+		assertEquals(7, service.budget(limited).usedThisMonth());
+	}
+
+	@Test
+	void requestsThatFailOnTheKeyOrTheNetworkAreNotCounted()
+	{
+		TestClock clock = new TestClock("2026-10-08T11:00:00");
+		FakeProvider limited = new FakeProvider("limited", 25, Duration.ofMinutes(1));
+		RateService service = service(clock, new TestSettings(), RateStore.inMemory(), limited);
+
+		limited.failure = new RateException(RateException.Kind.API_KEY, "wrong key");
+		assertThrows(java.util.concurrent.CompletionException.class, () -> service.test(limited, new TestSettings().providerSettings("limited")).join());
+		limited.failure = new RateException(RateException.Kind.NETWORK, "offline");
+		assertThrows(java.util.concurrent.CompletionException.class, () -> service.test(limited, new TestSettings().providerSettings("limited")).join());
+		assertEquals(0, service.budget(limited).usedThisMonth());
+
+		limited.failure = new RateException(RateException.Kind.UNEXPECTED_RESPONSE, "changed");
+		assertThrows(java.util.concurrent.CompletionException.class, () -> service.test(limited, new TestSettings().providerSettings("limited")).join());
+		assertEquals(1, service.budget(limited).usedThisMonth(), "the source answered, so it counted the request");
 	}
 
 	@Test

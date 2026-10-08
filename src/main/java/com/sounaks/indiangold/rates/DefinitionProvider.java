@@ -94,6 +94,12 @@ abstract class DefinitionProvider implements RateProvider
 	}
 
 	@Override
+	public boolean usageIsFree()
+	{
+		return definition.property("usage.url").isPresent() && definition.property("usage.free").map(Boolean::parseBoolean).orElse(false);
+	}
+
+	@Override
 	public Optional<String> signupHint()
 	{
 		return definition.property("signup.hint");

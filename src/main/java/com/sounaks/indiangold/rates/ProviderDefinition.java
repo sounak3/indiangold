@@ -58,6 +58,7 @@ import java.util.regex.Pattern;
  * fx.path, fx.url            exchange rates: an object mapping currency codes to rates
  * fx.direction=perUsd|usdPerUnit   perUsd: units of the currency per US dollar; usdPerUnit: dollars per unit
  * usage.url, usage.plan.path, usage.total.path, usage.used.path   how to ask for quota usage
+ * usage.free=true            asking for the usage costs nothing; the app then keeps an exact count
  * </pre>
  * @author Sounak Choudhury
  */

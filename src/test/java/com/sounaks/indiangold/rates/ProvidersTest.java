@@ -159,6 +159,8 @@ class ProvidersTest
 
 		assertEquals(new RateProvider.Usage("Free", 100, 12), usage);
 		assertTrue(server.builtIn("metals-dev").createProvider().signupHint().orElseThrow().contains("Get Access Code"));
+		assertTrue(server.builtIn("metals-dev").createProvider().usageIsFree());
+		assertFalse(server.builtIn("gold-api").createProvider().usageIsFree());
 		assertEquals(88, usage.remaining());
 	}
 

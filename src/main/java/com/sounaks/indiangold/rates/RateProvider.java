@@ -119,6 +119,12 @@ public interface RateProvider
 	 */
 	RateSnapshot fetch(FetchContext context) throws RateException;
 
+	/** Whether asking for the usage costs nothing; then the app checks it after every request to keep an exact count. */
+	default boolean usageIsFree()
+	{
+		return false;
+	}
+
 	/**
 	 * Asks the source how much of its quota is used, if it can tell.
 	 * @param context The settings, HTTP client and clock to use.

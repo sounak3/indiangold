@@ -193,8 +193,18 @@ public final class RateService implements AutoCloseable
 		return CompletableFuture.supplyAsync(() -> {
 			try
 			{
-				if(provider.monthlyQuota() > 0) budget(provider).record(provider.requestsPerFetch());
-				return provider.fetch(new FetchContext(providerSettings, http, clock));
+				FetchContext context = new FetchContext(providerSettings, http, clock);
+				try
+				{
+					RateSnapshot snapshot = provider.fetch(context);
+					countRequest(provider, context, null);
+					return snapshot;
+				}
+				catch(RateException e)
+				{
+					countRequest(provider, context, e);
+					throw e;
+				}
 			}
 			catch(RateException e)
 			{
@@ -378,17 +388,19 @@ public final class RateService implements AutoCloseable
 	{
 		Instant now = clock.instant();
 		store.recordAttempt(provider.id(), now);
-		if(provider.monthlyQuota() > 0) budget(provider).record(provider.requestsPerFetch());
 		Optional<RateException> failure = Optional.empty();
+		FetchContext context = new FetchContext(settings.providerSettings(provider.id()), http, clock);
 		try
 		{
-			RateSnapshot snapshot = provider.fetch(new FetchContext(settings.providerSettings(provider.id()), http, clock));
+			RateSnapshot snapshot = provider.fetch(context);
 			store.put(snapshot);
+			countRequest(provider, context, null);
 		}
 		catch(RateException e)
 		{
 			store.recordError(provider.id(), e.getMessage());
 			failure = Optional.of(e);
+			countRequest(provider, context, e);
 		}
 		catch(RuntimeException e)
 		{
@@ -398,6 +410,34 @@ public final class RateService implements AutoCloseable
 		}
 		saveStore();
 		return failure;
+	}
+
+	/**
+	 * Counts a request against a source's quota. If the source can report its usage for free, its own count is
+	 * taken (Metals.Dev, for example, does not count every request the app sends, such as one with a wrong key).
+	 * Otherwise the request is counted unless it failed on the key or never reached the source.
+	 */
+	private void countRequest(RateProvider provider, FetchContext context, RateException failure)
+	{
+		if(provider.monthlyQuota() <= 0) return;
+		if(provider.usageIsFree())
+		{
+			try
+			{
+				Optional<RateProvider.Usage> usage = provider.usage(context);
+				if(usage.isPresent())
+				{
+					budget(provider).syncWith(usage.get());
+					return;
+				}
+			}
+			catch(RateException | RuntimeException e)
+			{
+				// count it ourselves below
+			}
+		}
+		boolean notCounted = failure != null && (failure.kind() == RateException.Kind.API_KEY || failure.kind() == RateException.Kind.NETWORK);
+		if(!notCounted) budget(provider).record(provider.requestsPerFetch());
 	}
 
 	private void saveStore()

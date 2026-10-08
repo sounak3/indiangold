@@ -326,9 +326,12 @@ public final class RateStore
 			synchronized(RateStore.this)
 			{
 				if(usage.total() > 0) values.setProperty(prefix + "reportedTotal", String.valueOf(usage.total()));
-				int today = usedToday();
+				// The provider's count is the truth. Requests it did not count also come off today's count, so they
+				// don't hold back today's share; requests made elsewhere with the same key are not today's.
+				int counted = usedThisMonth();
+				int today = Math.max(0, Math.min(usage.used(), usedToday() - Math.max(0, counted - usage.used())));
 				values.setProperty(prefix + "month", YearMonth.now(clock).toString());
-				values.setProperty(prefix + "used", String.valueOf(Math.max(usage.used(), today)));
+				values.setProperty(prefix + "used", String.valueOf(usage.used()));
 				values.setProperty(prefix + "day", LocalDate.now(clock).toString());
 				values.setProperty(prefix + "usedToday", String.valueOf(today));
 			}

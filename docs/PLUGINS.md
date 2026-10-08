@@ -148,6 +148,7 @@ Only `id`, `name`, `type`, an address and one metal are required.
 | `metal.KEY.currency`, `metal.KEY.url` | a different currency or address for this metal only |
 | `fx.path`, `fx.url`, `fx.direction` | an object of currency code → rate; `perUsd` (units per US dollar) or `usdPerUnit` (dollars per unit) |
 | `usage.url`, `usage.plan.path`, `usage.total.path`, `usage.used.path` | how to ask the API how much of the quota is used ("Check usage") |
+| `usage.free=true` | asking for the usage costs nothing; the app then checks it after every request and shows the API's own count |
 
 Gold is always the price of **pure** gold; the app derives 22K, 18K and the other rows from it. If a source only quotes 22K, set `metal.gold.per` to match and divide by the fineness in a Java plug-in instead.
 
@@ -181,6 +182,7 @@ Optional methods (override as needed):
 | `int monthlyQuota()`, `int requestsPerFetch()` | 0 (no limit), 1 | the source has a monthly request limit |
 | `List<LocalTime> defaultSchedule()` | none | the default fetch times for a source with a quota |
 | `Optional<Usage> usage(FetchContext)` | empty | the source can report how much of its quota is used |
+| `boolean usageIsFree()` | `false` | asking for the usage costs nothing; the app then keeps the source's exact count |
 
 `fetch` is called on a background thread, never on the Swing thread. Don't open windows from it.
 
