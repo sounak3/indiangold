@@ -20,9 +20,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.Vector;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
+
 import javax.swing.border.TitledBorder;
 
 /**
@@ -32,7 +30,7 @@ import javax.swing.border.TitledBorder;
 public class AddRemoveBox extends JDialog
 {
 	public static final long serialVersionUID = 1L;
-	private final JList unitEditableList;
+	private final JList<CheckableItem> unitEditableList;
 	private final JButton buttonAdd,buttonEdit,buttonRemove,buttonSave,buttonCancel;
 	private final JScrollPane unitListScrollPane;
         private final JLabel labelVisRows, labelVisDecimals;
@@ -41,7 +39,7 @@ public class AddRemoveBox extends JDialog
         private final MarketRatesPanel marketPanel;
         private final JComboBox<CountryDefaults.Country> countryBox;
         private final JComboBox<CurrencyCatalog.Choice> currencyBox;
-        private final JComboBox comboVisDecimals,comboVisRows;
+        private final JComboBox<String> comboVisDecimals,comboVisRows;
         private final JRadioButton rbCalculator, rbRateBar, rbBoth, rbRateBarClickPolicy1, rbRateBarClickPolicy2;
 	FileOperations fOps;
         MouseClicks clickAdapter;
@@ -64,7 +62,7 @@ public class AddRemoveBox extends JDialog
 		JPanel p1=new JPanel(new BorderLayout());
 		JPanel leftPane=new JPanel(new BorderLayout());
 		unitListScrollPane=new JScrollPane();
-		unitEditableList=new JList();
+		unitEditableList=new JList<CheckableItem>();
 		CheckboxListRenderer clr = new CheckboxListRenderer();
                 actionAdapter = new ActionAdapter();
                 clickAdapter = new MouseClicks();
@@ -190,14 +188,14 @@ public class AddRemoveBox extends JDialog
                 rp31.setLayout(new BoxLayout(rp31, BoxLayout.LINE_AXIS));
                 labelVisRows=new JLabel("Visible rows at a time: ");
                 labelVisRows.setToolTipText("<html>Select the number of rows to display at a time,<br>in the main window weight conversion table.</html>");
-                comboVisRows=new JComboBox(new String[]{"8","9","10","11","12","13","14"});
+                comboVisRows=new JComboBox<String>(new String[]{"8","9","10","11","12","13","14"});
                 rp31.add(labelVisRows);
                 labelVisRows.setAlignmentX(LEFT_ALIGNMENT);
                 rp31.add(comboVisRows);
 		labelVisDecimals=new JLabel("No. of decimal places: ");
                 labelVisDecimals.setToolTipText("<html>Select the number of decimal places to display,<br>in the main window weight conversion table.</html>");
 		String nums[]=new String[]{"0","1","2","3","4","5","6","7","8","9","10","11","12"};
-		comboVisDecimals=new JComboBox(nums);
+		comboVisDecimals=new JComboBox<String>(nums);
                 rp31.add(Box.createRigidArea(new Dimension(10,0)));
 		rp31.add(labelVisDecimals);
 		rp31.add(comboVisDecimals);
@@ -210,9 +208,7 @@ public class AddRemoveBox extends JDialog
                 rp3.add(Box.createRigidArea(new Dimension(0,5)));
                 rp3.setBorder(BorderFactory.createTitledBorder(
                                   BorderFactory.createEtchedBorder(),
-                                  "IndianGold Calculator",
-                                  TitledBorder.TRAILING,
-                                  TitledBorder.DEFAULT_POSITION));
+                                  "Calculated Rows"));
                 JPanel options = new JPanel();
                 options.setLayout(new BoxLayout(options, BoxLayout.PAGE_AXIS));
                 for(JComponent part : new JComponent[] { place, p2, clicks, rp3 })

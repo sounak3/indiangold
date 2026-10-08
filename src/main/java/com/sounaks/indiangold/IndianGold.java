@@ -39,6 +39,7 @@ import java.util.Currency;
 import java.util.Properties;
 import java.util.Vector;
 import javax.swing.*;
+import javax.swing.border.Border;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.text.SimpleAttributeSet;
@@ -59,7 +60,7 @@ public class IndianGold extends JFrame
     NumberField weightField, rateField, noOfUnitsField, makingChargeField, discountField, numTax1Field, numTax2Field, numTax3Field;
     JTextField labelTax1EditField, labelTax2EditField, labelTax3EditField;
     JTable table1;
-    JComboBox weightUnitCombo1, weightUnitCombo2, discountOnCombo3;
+    JComboBox<String> weightUnitCombo1, weightUnitCombo2, discountOnCombo3;
     DecimalFormat formatter;
     DefaultTableModel model;
     JButton abtButton, setButton, taxButton, rateBarButton, ok1, ok2;
@@ -75,6 +76,7 @@ public class IndianGold extends JFrame
     PrivateActionAdapter aAdapter;
     private final JPanel mainPane, p12, p32, rp320, rp321, rp322;
     private final CardLayout cards;
+    private final Border padding = BorderFactory.createEmptyBorder(2, 5, 2, 5);
     boolean nowcard = true;
     boolean taxBoxActivated = false;
     public static final String VERSION = readVersion();
@@ -214,7 +216,7 @@ public class IndianGold extends JFrame
      * @param source Represents the JComboBox to be parsed.
      * @return The milligram value of the selected unit.
      */
-    private double getWeightSelectionMgValue(JComboBox source)
+    private double getWeightSelectionMgValue(JComboBox<String> source)
     {
         String selection=(String)source.getSelectedItem();
         for(int i=0; i<weightList.size(); i++)
@@ -637,7 +639,7 @@ public class IndianGold extends JFrame
         weightField=new NumberField(13, false);
         weightField.addActionListener(aAdapter);
         weightField.addFocusListener(fAdapter);
-        weightUnitCombo1=new JComboBox(weightList);
+        weightUnitCombo1=new JComboBox<String>(weightList);
         weightUnitCombo1.addActionListener(aAdapter);
         int requiredTFheight = weightUnitCombo1.getPreferredSize().height;
         fields[0]=weightField;
@@ -684,7 +686,7 @@ public class IndianGold extends JFrame
 //                labelWeightUnit.setVisible(false);
         noOfUnitsField.addActionListener(aAdapter);
         noOfUnitsField.addFocusListener(fAdapter);
-        weightUnitCombo2=new JComboBox(weightList);
+        weightUnitCombo2=new JComboBox<String>(weightList);
 //        weightUnitCombo2.setPreferredSize(goodDimension);
         weightUnitCombo2.addActionListener(aAdapter);
         weightUnitCombo2.setVisible(false);
@@ -701,7 +703,7 @@ public class IndianGold extends JFrame
         labelDiscount1=new JLabel("Discount");
         labelDiscount2=new JLabel("on");
         String discOn[] = {"Price", "Making", "Total"};
-        discountOnCombo3=new JComboBox(discOn);
+        discountOnCombo3=new JComboBox<String>(discOn);
         discountOnCombo3.addActionListener(aAdapter);
         makingChargeField=new NumberField(4, true);
         fields[3]=makingChargeField;
@@ -747,9 +749,32 @@ public class IndianGold extends JFrame
         table1=new JTable(model);
         table1.getColumnModel().getColumn(0).setPreferredWidth(150);
         table1.getColumnModel().getColumn(1).setPreferredWidth(190);
-        DefaultTableCellRenderer rightRenderer = new DefaultTableCellRenderer();
-        rightRenderer.setHorizontalAlignment(JLabel.RIGHT );
+        DefaultTableCellRenderer rightRenderer = new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(
+            JTable table, Object value, boolean isSelected, 
+            boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(
+                table, value, isSelected, hasFocus, row, column);
+                c.setFont(new Font("Courier", Font.PLAIN, 11));
+                setBorder(BorderFactory.createCompoundBorder(getBorder(), padding));
+                setHorizontalAlignment(JLabel.RIGHT);
+                return c;
+            }
+        };
+        DefaultTableCellRenderer gapRenderer = new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(
+            JTable table, Object value, boolean isSelected, 
+            boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(
+                table, value, isSelected, hasFocus, row, column);
+                setBorder(BorderFactory.createCompoundBorder(getBorder(), padding));
+                return c;
+            }
+        };
         table1.getColumnModel().getColumn(0).setCellRenderer( rightRenderer );
+        table1.getColumnModel().getColumn(1).setCellRenderer( gapRenderer );
         table1.setFocusable(false);
         spane =new JScrollPane(table1);
         displayNumRows(Integer.valueOf(fOps.getValue("$numrows", "10")));

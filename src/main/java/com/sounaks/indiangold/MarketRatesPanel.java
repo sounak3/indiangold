@@ -86,7 +86,7 @@ final class MarketRatesPanel extends JPanel
 		table.getColumnModel().getColumn(1).setPreferredWidth(170);
 		table.getColumnModel().getColumn(2).setPreferredWidth(100);
 		table.getColumnModel().getColumn(3).setPreferredWidth(230);
-		table.setPreferredScrollableViewportSize(new Dimension(560, table.getRowHeight() * 8));
+		table.setPreferredScrollableViewportSize(new Dimension(560, table.getRowHeight() * 6));
 		table.getSelectionModel().addListSelectionListener(e -> {
 			if(!e.getValueIsAdjusting()) showDetails();
 		});
