@@ -17,12 +17,13 @@ Typical workflow:
 2. `indiangold dev` runs automatically. It drops `indiangold_latest.jar` on the Desktop of all three machines and runs the unit tests on a snapshot of your working copy.
 3. Test the jar on Linux, macOS and Windows.
 4. To release a new version, set `<version>` in `pom.xml` (for example `5.1-SNAPSHOT` → installers versioned `5.1`). Commit and push to `master`.
-5. Run `indiangold` (release). Download the installers from the build page and upload them to GitHub Releases.
+5. With `master` checked out and no uncommitted changes, build in the IDE so `indiangold dev` passes on exactly those files (see [Release gate](#release-gate)).
+6. Run `indiangold` (release). Download the installers from the build page and upload them to GitHub Releases.
 
 Each build's description shows what it was built from:
 
 - **Release:** `v5.0 @ 2e1154f0`, meaning the version and the commit it was built from.
-- **Dev:** `2e1154f`, or `2e1154f + uncommitted changes` if the IDE build included work that wasn't committed yet.
+- **Dev:** `2e1154f`, or `2e1154f (uncommitted changes: no release pass)` if the run can't count for a release.
 
 ### Version
 
@@ -42,6 +43,20 @@ Build jar (lin)                         Package (parallel)
 ```
 
 Only `lin` checks out the repository. `win` and `mac` receive the jar, the license and the icons through `stash`/`unstash`, so they need neither git nor GitHub access. If a unit test fails, the release stops before packaging.
+
+### Release gate
+
+**A release only builds files that have passed `indiangold dev`.** Right after checkout, the release looks up the git *tree hash* of the commit, which identifies its exact files, in `/home/sounak/jenkins/release-gate/indiangold/` on `lin`. If there's no pass marker for that tree, the release stops within seconds and names the commit to test. *Build Now* stays a single click, and there's no way to skip the check.
+
+Because the gate matches files, not commit IDs, a merge commit whose files are identical to a branch that already passed dev also passes. Anything with different files needs its own dev run.
+
+A dev run writes the marker only when all of these hold:
+- the whole run succeeded: jar copied to all three machines, and all tests passed
+- the working copy had no uncommitted or untracked changes
+- the jar was newer than every file in `src/` and `pom.xml`
+- the working copy didn't change during the run
+
+The build description says when a run doesn't qualify, for example `1a2b3c4 (uncommitted changes: no release pass)`. To release a commit, check it out cleanly and start `indiangold dev`, by building in the IDE or with *Build with Parameters*. Once it passes, run `indiangold`.
 
 The `app/` folder is jpackage's `--input`, and everything in it ships inside the installer:
 
@@ -203,6 +218,6 @@ Some docks only show pinned apps (on dell5558, Dash2Dock Lite did not show GNOME
 4. **The DMG is Intel-only,** because the `mac` agent has an Intel JDK. Apple Silicon Macs run it through Rosetta.
 5. **Test machines need Java 21** to run the jar from the dev pipeline. Each deploy stage prints `java -version`.
 6. **Windows 7 is unsupported by Java 21.** The MSI itself installs and runs on Windows 10/11; see desktime's BUILD.md.
-7. **What you test isn't exactly what you ship.** `indiangold dev` tests your IDE build, which may include uncommitted changes. The release rebuilds from `master`. The build descriptions record the commit, so you can see whether they match.
+7. **The release rebuilds the jar.** The [release gate](#release-gate) makes sure the release's files are the ones `indiangold dev` tested, but the release compiles them again on `lin` rather than shipping the IDE-built jar.
 8. **The copyright year in the jpackage options is fixed** (`2012-2026`) and needs updating in the `Jenkinsfile` each year.
 9. **The license wording differs.** The README and `LICENSE.md` say GPL version 3; the Java source headers say "version 3 or (at your option) any later version".

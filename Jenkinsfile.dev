@@ -14,6 +14,7 @@ pipeline {
     }
     environment {
         JAR = "${params.JAR_PATH ?: defaultJarPath}"
+        GATE_DIR = '/home/sounak/jenkins/release-gate/indiangold'
     }
     stages {
         stage('Collect jar') {
@@ -27,9 +28,22 @@ pipeline {
                     sha256sum indiangold_latest.jar
                 '''
                 script {
-                    def commit = sh(returnStdout: true, script: 'git -C "$(dirname "$(dirname "$JAR")")" rev-parse --short HEAD').trim()
-                    def changes = sh(returnStdout: true, script: 'git -C "$(dirname "$(dirname "$JAR")")" status --porcelain').trim()
-                    currentBuild.description = changes ? "${commit} + uncommitted changes" : commit
+                    env.REPO_DIR = sh(returnStdout: true, script: 'dirname "$(dirname "$JAR")"').trim()
+                    env.TESTED_COMMIT = sh(returnStdout: true, script: 'git -C "$REPO_DIR" rev-parse HEAD').trim()
+                    env.TESTED_TREE = sh(returnStdout: true, script: 'git -C "$REPO_DIR" rev-parse "HEAD^{tree}"').trim()
+                    def changes = sh(returnStdout: true, script: 'git -C "$REPO_DIR" status --porcelain').trim()
+                    def newerSource = sh(returnStdout: true, script: 'find "$REPO_DIR/src" "$REPO_DIR/pom.xml" -type f -newer "$JAR" | head -1').trim()
+                    // A release pass needs the jar and tests to match the commit's exact files.
+                    if (changes) {
+                        env.GATE_NOTE = 'uncommitted changes'
+                    } else if (newerSource) {
+                        env.GATE_NOTE = 'jar is older than the sources'
+                        echo "Source newer than the jar: ${newerSource}"
+                    } else {
+                        env.GATE_NOTE = ''
+                    }
+                    def shortCommit = env.TESTED_COMMIT.substring(0, 7)
+                    currentBuild.description = env.GATE_NOTE ? "${shortCommit} (${env.GATE_NOTE}: no release pass)" : shortCommit
                 }
                 archiveArtifacts artifacts: 'indiangold_latest.jar', fingerprint: true
                 stash name: 'jar', includes: 'indiangold_latest.jar'
@@ -70,11 +84,36 @@ pipeline {
             agent { label 'lin' }
             steps {
                 sh '''
-                    REPO="$(dirname "$(dirname "$JAR")")"
-                    rsync -a --delete --exclude /target --exclude /.git --exclude /bin --exclude '/*.jar' "$REPO/" src/
-                    cd src && mvn -B -ntp -Dmaven.test.failure.ignore=true test
+                    rsync -a --delete --exclude /target --exclude /.git --exclude /bin --exclude '/*.jar' "$REPO_DIR/" src/
                 '''
+                script {
+                    def tree = sh(returnStdout: true, script: 'git -C "$REPO_DIR" rev-parse "HEAD^{tree}"').trim()
+                    def changes = sh(returnStdout: true, script: 'git -C "$REPO_DIR" status --porcelain').trim()
+                    if (!env.GATE_NOTE && (tree != env.TESTED_TREE || changes)) {
+                        env.GATE_NOTE = 'working copy changed during the run'
+                        currentBuild.description = "${env.TESTED_COMMIT.substring(0, 7)} (${env.GATE_NOTE}: no release pass)"
+                    }
+                }
+                sh 'cd src && mvn -B -ntp -Dmaven.test.failure.ignore=true test'
                 junit allowEmptyResults: true, testResults: 'src/target/surefire-reports/*.xml'
+            }
+        }
+    }
+    post {
+        success {
+            script {
+                if (env.GATE_NOTE) {
+                    echo "No release pass written: ${env.GATE_NOTE}."
+                } else {
+                    node('lin') {
+                        sh '''
+                            mkdir -p "$GATE_DIR"
+                            printf 'tree=%s\\ncommit=%s\\ndev_build=%s\\npassed=%s\\n' "$TESTED_TREE" "$TESTED_COMMIT" "$BUILD_NUMBER" "$(date -Iseconds)" > "$GATE_DIR/$TESTED_TREE.tmp"
+                            mv "$GATE_DIR/$TESTED_TREE.tmp" "$GATE_DIR/$TESTED_TREE"
+                        '''
+                        echo "Release pass written for commit ${env.TESTED_COMMIT} (tree ${env.TESTED_TREE})."
+                    }
+                }
             }
         }
     }
