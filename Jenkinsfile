@@ -7,6 +7,7 @@ pipeline {
         // jdeps can't see these: jdk.crypto.ec is needed for HTTPS rate fetches (TLS handshakes fail without it),
         // jdk.localedata for number formats in non-English locales.
         EXTRA_MODULES = 'jdk.crypto.ec,jdk.localedata'
+        GATE_DIR = '/home/sounak/jenkins/release-gate/indiangold'
     }
     stages {
         stage('Build jar') {
@@ -15,6 +16,14 @@ pipeline {
                 cleanWs()
                 script {
                     def scmVars = checkout scm
+                    // Release gate: 'indiangold dev' must have passed on a commit with exactly these files (same git tree).
+                    def tree = sh(returnStdout: true, script: 'git rev-parse "HEAD^{tree}"').trim()
+                    if (sh(returnStatus: true, script: "test -f '${env.GATE_DIR}/${tree}'") != 0) {
+                        error("Release blocked: commit ${scmVars.GIT_COMMIT.substring(0, 8)} (tree ${tree.substring(0, 12)}) has no passing 'indiangold dev' run. " +
+                              "Check out this commit with no uncommitted changes, build it in the IDE so 'indiangold dev' passes, then run the release again.")
+                    }
+                    echo "Release gate passed:"
+                    sh "cat '${env.GATE_DIR}/${tree}'"
                     env.APP_VERSION = sh(returnStdout: true, script: 'mvn -B -q help:evaluate -Dexpression=project.version -DforceStdout').trim().replace('-SNAPSHOT', '')
                     if (!(env.APP_VERSION ==~ /\d+(\.\d+){0,2}/)) {
                         error("pom.xml version '${env.APP_VERSION}' is not a valid installer version; use e.g. 1.2 or 1.2.3")
